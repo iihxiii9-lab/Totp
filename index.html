@@ -223,6 +223,26 @@ a { color: var(--accent); }
 .auth-guest { margin-top: 18px; font-size: 13px; color: var(--text-muted); background: none; border: none; cursor: pointer; }
 .auth-guest:hover { color: var(--text); }
 
+/* =========================================================
+   Face capture screen — visible live preview + manual capture
+   ========================================================= */
+.face-capture-screen {
+  position: fixed; inset: 0; z-index: 96; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 32px 24px calc(32px + var(--safe-bottom));
+  text-align: center;
+}
+.face-capture-screen h1 { font-size: clamp(24px, 7vw, 30px); margin-bottom: 18px; }
+.face-video-frame {
+  width: min(78vw, 280px); aspect-ratio: 1; border-radius: 50%; overflow: hidden;
+  border: 3px solid var(--accent); box-shadow: var(--shadow-pop); background: var(--surface-2);
+}
+.face-video-frame video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.face-capture-status { margin: 16px 0 0; min-height: 20px; }
+.face-capture-controls { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 18px; width: 100%; max-width: 280px; }
+.face-capture-controls .btn { width: 100%; }
+.face-capture-controls .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .hero-greeting { margin: 0 0 4px; font-size: 13px; font-weight: 700; opacity: 0.85; }
 
 /* =========================================================
@@ -864,8 +884,18 @@ input[type="number"] {
     </div>
   </div>
 
-  <!-- Shared hidden video element used for face capture -->
-  <video id="face-capture-video" playsinline muted style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none;"></video>
+  <!-- ============ FACE CAPTURE SCREEN (visible live preview + manual capture) ============ -->
+  <div id="face-capture-screen" class="face-capture-screen" hidden role="dialog" aria-modal="true" aria-labelledby="face-capture-title">
+    <h1 id="face-capture-title">Center your face</h1>
+    <div class="face-video-frame">
+      <video id="face-live-video" autoplay playsinline muted></video>
+    </div>
+    <p id="face-capture-status" class="field-hint" role="status" aria-live="polite">Starting camera…</p>
+    <div class="face-capture-controls">
+      <button id="face-capture-btn" class="btn btn-primary" type="button" disabled>Capture</button>
+      <button id="face-capture-cancel" class="text-link auth-guest" type="button">Cancel</button>
+    </div>
+  </div>
 
   <!-- ============ SECURITY CENTER ============ -->
   <div id="security-center" class="security-center" hidden role="dialog" aria-modal="true" aria-labelledby="security-title">
@@ -1492,14 +1522,12 @@ const TODAY_EXERCISES = EXERCISES_BY_AREA["full-body"];
     });
   }
 
-  async function withCamera(fn) {
+  async function runFaceCapture({ verifyAgainst = null } = {}) {
     const consented = await requestCameraConsent();
     if (!consented) throw new Error("Camera permission declined.");
 
     let stream;
     try {
-      // If the browser's own permission prompt never appears (e.g. blocked
-      // by the page being inside a restrictive iframe), don't hang forever.
       stream = await Promise.race([
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }),
         new Promise((_, reject) =>
@@ -1513,15 +1541,64 @@ const TODAY_EXERCISES = EXERCISES_BY_AREA["full-body"];
       throw err instanceof Error ? err : new Error("Couldn't access the camera.");
     }
 
-    const video = $("#face-capture-video");
+    const screen = $("#face-capture-screen");
+    const video = $("#face-live-video");
+    const status = $("#face-capture-status");
+    const captureBtn = $("#face-capture-btn");
+    const cancelBtn = $("#face-capture-cancel");
+
     video.srcObject = stream;
     await video.play();
-    try {
-      return await fn(video);
-    } finally {
-      stream.getTracks().forEach((t) => t.stop());
-      video.srcObject = null;
-    }
+    screen.hidden = false;
+    status.textContent = "Loading face recognition (first time only)…";
+    captureBtn.disabled = true;
+
+    let modelsReady = false;
+    loadFaceApi()
+      .then(() => {
+        modelsReady = true;
+        status.textContent = "Center your face in the circle, then tap Capture.";
+        captureBtn.disabled = false;
+      })
+      .catch((err) => {
+        status.textContent = err.message || "Couldn't load face recognition.";
+      });
+
+    return new Promise((resolve, reject) => {
+      function cleanup() {
+        stream.getTracks().forEach((t) => t.stop());
+        video.srcObject = null;
+        screen.hidden = true;
+        captureBtn.removeEventListener("click", onCapture);
+        cancelBtn.removeEventListener("click", onCancel);
+      }
+      async function onCapture() {
+        if (!modelsReady) return;
+        captureBtn.disabled = true;
+        status.textContent = "Checking…";
+        try {
+          const descriptor = await captureDescriptor(video);
+          if (verifyAgainst) {
+            const distance = euclideanDistance(verifyAgainst, descriptor);
+            const ok = distance < FACE_MATCH_THRESHOLD;
+            cleanup();
+            resolve({ ok });
+          } else {
+            cleanup();
+            resolve({ descriptor });
+          }
+        } catch (err) {
+          status.textContent = (err.message || "No face detected") + " — try again.";
+          captureBtn.disabled = false;
+        }
+      }
+      function onCancel() {
+        cleanup();
+        reject(new Error("cancelled"));
+      }
+      captureBtn.addEventListener("click", onCapture);
+      cancelBtn.addEventListener("click", onCancel);
+    });
   }
 
   /* ===========================================================
@@ -1671,16 +1748,15 @@ const TODAY_EXERCISES = EXERCISES_BY_AREA["full-body"];
       feedback.classList.remove("is-error");
       btn.disabled = true;
       try {
-        const descriptor = await withCamera(async (video) => {
-          feedback.textContent = "Loading face recognition (first time only)…";
-          return captureDescriptor(video);
-        });
+        const { descriptor } = await runFaceCapture();
         secSet(SEC_STORAGE.face, { descriptor, createdAt: Date.now() });
         feedback.textContent = "Face unlock enabled.";
         refreshSecurityCenterUI();
       } catch (err) {
-        feedback.textContent = err.message || "Couldn't set up face unlock.";
-        feedback.classList.add("is-error");
+        if (err.message !== "cancelled") {
+          feedback.textContent = err.message || "Couldn't set up face unlock.";
+          feedback.classList.add("is-error");
+        }
       } finally {
         btn.disabled = false;
       }
@@ -1747,17 +1823,12 @@ const TODAY_EXERCISES = EXERCISES_BY_AREA["full-body"];
       btn.disabled = true;
       try {
         const stored = secGet(SEC_STORAGE.face, null);
-        const liveDescriptor = await withCamera(async (video) => {
-          feedback.textContent = "Checking your face…";
-          return captureDescriptor(video);
-        });
-        const distance = euclideanDistance(stored.descriptor, liveDescriptor);
-        const ok = distance < FACE_MATCH_THRESHOLD;
+        const { ok } = await runFaceCapture({ verifyAgainst: stored.descriptor });
         logAttempt("face", ok);
         feedback.textContent = ok ? "" : "Face didn't match. Try again in good lighting.";
         if (ok) unlock();
       } catch (err) {
-        feedback.textContent = err.message || "Couldn't verify your face.";
+        if (err.message !== "cancelled") feedback.textContent = err.message || "Couldn't verify your face.";
       } finally {
         btn.disabled = false;
       }
