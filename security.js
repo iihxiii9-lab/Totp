@@ -393,14 +393,12 @@
     });
   }
 
-  async function withCamera(fn) {
+  async function runFaceCapture({ verifyAgainst = null } = {}) {
     const consented = await requestCameraConsent();
     if (!consented) throw new Error("Camera permission declined.");
 
     let stream;
     try {
-      // If the browser's own permission prompt never appears (e.g. blocked
-      // by the page being inside a restrictive iframe), don't hang forever.
       stream = await Promise.race([
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }),
         new Promise((_, reject) =>
@@ -414,15 +412,64 @@
       throw err instanceof Error ? err : new Error("Couldn't access the camera.");
     }
 
-    const video = $("#face-capture-video");
+    const screen = $("#face-capture-screen");
+    const video = $("#face-live-video");
+    const status = $("#face-capture-status");
+    const captureBtn = $("#face-capture-btn");
+    const cancelBtn = $("#face-capture-cancel");
+
     video.srcObject = stream;
     await video.play();
-    try {
-      return await fn(video);
-    } finally {
-      stream.getTracks().forEach((t) => t.stop());
-      video.srcObject = null;
-    }
+    screen.hidden = false;
+    status.textContent = "Loading face recognition (first time only)…";
+    captureBtn.disabled = true;
+
+    let modelsReady = false;
+    loadFaceApi()
+      .then(() => {
+        modelsReady = true;
+        status.textContent = "Center your face in the circle, then tap Capture.";
+        captureBtn.disabled = false;
+      })
+      .catch((err) => {
+        status.textContent = err.message || "Couldn't load face recognition.";
+      });
+
+    return new Promise((resolve, reject) => {
+      function cleanup() {
+        stream.getTracks().forEach((t) => t.stop());
+        video.srcObject = null;
+        screen.hidden = true;
+        captureBtn.removeEventListener("click", onCapture);
+        cancelBtn.removeEventListener("click", onCancel);
+      }
+      async function onCapture() {
+        if (!modelsReady) return;
+        captureBtn.disabled = true;
+        status.textContent = "Checking…";
+        try {
+          const descriptor = await captureDescriptor(video);
+          if (verifyAgainst) {
+            const distance = euclideanDistance(verifyAgainst, descriptor);
+            const ok = distance < FACE_MATCH_THRESHOLD;
+            cleanup();
+            resolve({ ok });
+          } else {
+            cleanup();
+            resolve({ descriptor });
+          }
+        } catch (err) {
+          status.textContent = (err.message || "No face detected") + " — try again.";
+          captureBtn.disabled = false;
+        }
+      }
+      function onCancel() {
+        cleanup();
+        reject(new Error("cancelled"));
+      }
+      captureBtn.addEventListener("click", onCapture);
+      cancelBtn.addEventListener("click", onCancel);
+    });
   }
 
   /* ===========================================================
@@ -572,16 +619,15 @@
       feedback.classList.remove("is-error");
       btn.disabled = true;
       try {
-        const descriptor = await withCamera(async (video) => {
-          feedback.textContent = "Loading face recognition (first time only)…";
-          return captureDescriptor(video);
-        });
+        const { descriptor } = await runFaceCapture();
         secSet(SEC_STORAGE.face, { descriptor, createdAt: Date.now() });
         feedback.textContent = "Face unlock enabled.";
         refreshSecurityCenterUI();
       } catch (err) {
-        feedback.textContent = err.message || "Couldn't set up face unlock.";
-        feedback.classList.add("is-error");
+        if (err.message !== "cancelled") {
+          feedback.textContent = err.message || "Couldn't set up face unlock.";
+          feedback.classList.add("is-error");
+        }
       } finally {
         btn.disabled = false;
       }
@@ -648,17 +694,12 @@
       btn.disabled = true;
       try {
         const stored = secGet(SEC_STORAGE.face, null);
-        const liveDescriptor = await withCamera(async (video) => {
-          feedback.textContent = "Checking your face…";
-          return captureDescriptor(video);
-        });
-        const distance = euclideanDistance(stored.descriptor, liveDescriptor);
-        const ok = distance < FACE_MATCH_THRESHOLD;
+        const { ok } = await runFaceCapture({ verifyAgainst: stored.descriptor });
         logAttempt("face", ok);
         feedback.textContent = ok ? "" : "Face didn't match. Try again in good lighting.";
         if (ok) unlock();
       } catch (err) {
-        feedback.textContent = err.message || "Couldn't verify your face.";
+        if (err.message !== "cancelled") feedback.textContent = err.message || "Couldn't verify your face.";
       } finally {
         btn.disabled = false;
       }
