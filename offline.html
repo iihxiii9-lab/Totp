@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>You're offline — FitPulse</title>
+  <meta name="theme-color" content="#14100D" />
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; min-height: 100dvh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center; padding: 32px;
+      background: #14100d; color: #f5f1ea; font-family: "Inter", sans-serif;
+    }
+    .mark { width: 44px; height: 44px; fill: #ff6b1a; margin-bottom: 18px; }
+    h1 { font-family: "Big Shoulders Display", sans-serif; font-size: 34px; margin: 0 0 10px; }
+    p { color: #a79c8d; max-width: 32ch; margin: 0 0 22px; }
+    a {
+      display: inline-block; background: linear-gradient(135deg, #ff6b1a, #ffb020);
+      color: #1b0f04; text-decoration: none; font-weight: 700; padding: 12px 24px; border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 1 5 13h5l-1 10 8-13h-5l1-9z" /></svg>
+  <h1>You're offline</h1>
+  <p>This page hasn't been saved yet. Your workout plan and progress are still available from the home screen.</p>
+  <a href="./">Back to FitPulse</a>
+</body>
+</html>

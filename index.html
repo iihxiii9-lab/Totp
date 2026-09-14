@@ -1,0 +1,2522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>FitPulse — Home Workout Coach</title>
+  <meta name="description" content="A 4-week guided home workout plan you can follow offline, anywhere." />
+
+  <!-- PWA / mobile meta -->
+  <meta name="theme-color" content="#14100D" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FitPulse" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+
+  <!-- Fonts: condensed athletic display + neutral body -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+/* =========================================================
+   FitPulse — design tokens
+   ========================================================= */
+:root {
+  /* color */
+  --bg: #14100d;
+  --surface: #1e1812;
+  --surface-2: #271f17;
+  --border: rgba(245, 241, 234, 0.08);
+  --text: #f5f1ea;
+  --text-muted: #a79c8d;
+  --accent: #ff6b1a;
+  --accent-2: #ffb020;
+  --accent-grad: linear-gradient(135deg, #ff6b1a 0%, #ffb020 100%);
+  --success: #4ade80;
+  --teal: #2dd4bf;
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-pop: 0 10px 28px rgba(255, 107, 26, 0.28);
+
+  /* type */
+  --font-display: "Big Shoulders Display", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* layout */
+  --content-max: 520px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --tab-bar-h: 64px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #f6f2ea;
+  --surface: #ffffff;
+  --surface-2: #fdf6ec;
+  --border: rgba(20, 16, 13, 0.08);
+  --text: #1b1611;
+  --text-muted: #6d6255;
+  color-scheme: light;
+}
+
+/* =========================================================
+   Reset & base
+   ========================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: calc(var(--tab-bar-h) + var(--safe-bottom) + 12px);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.05; margin: 0; }
+
+button { font-family: inherit; }
+
+a { color: var(--accent); }
+
+.skip-link {
+  position: absolute; left: -999px; top: 0; z-index: 100;
+  background: var(--accent); color: #14100d; padding: 10px 16px; border-radius: var(--radius-sm);
+}
+.skip-link:focus { left: 12px; top: 12px; }
+
+:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+
+/* The native `hidden` attribute must always win, even over classes further
+   down this file that set their own `display` (e.g. .player, .offline-banner).
+   Without this, overlays render on load instead of staying hidden until JS
+   opens them. */
+[hidden] { display: none !important; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* =========================================================
+   Header
+   ========================================================= */
+.app-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: calc(14px + var(--safe-top)) 20px 14px;
+  max-width: 960px; margin: 0 auto;
+  position: sticky; top: 0; z-index: 30;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.brand {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.brand-mark { width: 20px; height: 20px; fill: var(--accent); }
+
+.header-actions { display: flex; align-items: center; gap: 8px; }
+
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  cursor: pointer; transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.icon-btn:hover { background: var(--surface-2); }
+.icon-btn:active { transform: scale(0.94); }
+.icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn-lg { width: 52px; height: 52px; background: transparent; border: none; }
+.icon-btn-lg svg { width: 26px; height: 26px; fill: currentColor; stroke: none; }
+.icon-btn-lg:hover { background: var(--surface); }
+
+/* Desktop menu bar (hidden on narrow viewports; bottom tab bar covers mobile nav) */
+.menu-bar { display: none; align-items: center; gap: 4px; }
+.menu-link {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 14px; font-weight: 600; padding: 9px 16px; border-radius: 999px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.menu-link:hover { color: var(--text); background: var(--surface); }
+.menu-link.is-active { color: #1b0f04; background: var(--accent-grad); }
+
+.menu-toggle { display: inline-flex; }
+
+/* Mobile drawer */
+.menu-scrim {
+  position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.5);
+  opacity: 0; transition: opacity 0.2s ease;
+}
+.menu-scrim.is-open { opacity: 1; }
+
+.menu-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 51;
+  width: min(78vw, 320px);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  padding: calc(16px + var(--safe-top)) 18px calc(18px + var(--safe-bottom));
+  display: flex; flex-direction: column; gap: 22px;
+  transform: translateX(100%);
+  transition: transform 0.22s ease;
+}
+.menu-drawer.is-open { transform: translateX(0); }
+.menu-drawer-head { display: flex; align-items: center; justify-content: space-between; }
+.menu-drawer-links { display: flex; flex-direction: column; gap: 4px; }
+.menu-drawer-link {
+  display: flex; align-items: center; gap: 12px;
+  background: none; border: none; color: var(--text); cursor: pointer;
+  font-size: 16px; font-weight: 600; padding: 13px 10px; border-radius: var(--radius-sm);
+  text-align: left;
+}
+.menu-drawer-link svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.menu-drawer-link:hover { background: var(--surface-2); }
+.menu-drawer-link.is-active { color: var(--accent); }
+.menu-drawer-note { margin-top: auto; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+.menu-drawer-profile { display: flex; align-items: center; gap: 12px; padding: 4px 10px 14px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.menu-drawer-avatar {
+  width: 42px; height: 42px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--accent-grad); color: #1b0f04; font-family: var(--font-display);
+  font-size: 18px; display: flex; align-items: center; justify-content: center;
+}
+.menu-drawer-name { margin: 0 0 2px; font-weight: 700; font-size: 15px; }
+.menu-drawer-profile .text-link { font-size: 12px; }
+
+/* =========================================================
+   Sign-in overlay — first-visit profile screen
+   ========================================================= */
+.auth-screen {
+  position: fixed; inset: 0; z-index: 90; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 32px 24px calc(32px + var(--safe-bottom));
+  text-align: center;
+}
+.auth-mark { width: 40px; height: 40px; fill: var(--accent); margin-bottom: 18px; }
+.auth-screen h1 { font-size: clamp(28px, 8vw, 36px); margin-bottom: 10px; }
+.auth-sub { color: var(--text-muted); max-width: 32ch; margin: 0 0 26px; font-size: 15px; }
+.auth-form { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; }
+.auth-form input {
+  width: 100%; min-height: 50px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font-size: 16px; padding: 0 16px;
+  font-family: var(--font-body); text-align: center;
+}
+.auth-form .btn { width: 100%; }
+.auth-guest { margin-top: 18px; font-size: 13px; color: var(--text-muted); background: none; border: none; cursor: pointer; }
+.auth-guest:hover { color: var(--text); }
+
+.hero-greeting { margin: 0 0 4px; font-size: 13px; font-weight: 700; opacity: 0.85; }
+
+/* =========================================================
+   Lock screen (boot-time gate)
+   ========================================================= */
+.lock-screen {
+  position: fixed; inset: 0; z-index: 95; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 32px 24px calc(32px + var(--safe-bottom));
+  text-align: center;
+}
+.lock-screen h1 { font-size: clamp(28px, 8vw, 36px); margin-bottom: 10px; }
+.lock-method { width: 100%; max-width: 320px; margin-top: 14px; }
+.lock-method .auth-form { max-width: none; }
+
+/* =========================================================
+   Security Center
+   ========================================================= */
+.security-center {
+  position: fixed; inset: 0; z-index: 92; background: var(--bg);
+  overflow-y: auto; padding: calc(16px + var(--safe-top)) 20px calc(32px + var(--safe-bottom));
+}
+.security-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.security-header h1 { font-size: 28px; }
+.security-intro { color: var(--text-muted); font-size: 14px; line-height: 1.5; margin: 8px 0 20px; }
+
+.security-row {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow-card);
+}
+.security-row-head { display: flex; align-items: center; gap: 10px; }
+.security-row-head > div { flex: 1; }
+.security-row-title { margin: 0; font-weight: 700; font-size: 15px; }
+.security-row-status { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); }
+.security-row-status.is-on { color: var(--success); }
+.security-panel { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.sec-totp-secret {
+  font-family: var(--font-display); font-size: 20px; letter-spacing: 2px;
+  background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px; text-align: center; margin: 8px 0 12px;
+}
+.field-hint.is-error { color: #ff6b6b; }
+
+.sec-log-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sec-log-row {
+  display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-muted);
+  background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px 10px;
+}
+.sec-log-row.is-success span:nth-child(2) { color: var(--success); }
+.sec-log-row.is-fail span:nth-child(2) { color: #ff6b6b; }
+.sec-log-empty { font-size: 13px; color: var(--text-muted); }
+
+.security-wipe-btn { width: 100%; background: transparent; border: 1px solid #ff6b6b; color: #ff6b6b; margin-top: 6px; }
+.security-wipe-btn:hover { background: rgba(255, 107, 107, 0.08); }
+
+@media (min-width: 720px) {
+  .menu-bar { display: flex; }
+  .menu-toggle { display: none; }
+  .tab-bar { display: none; }
+  body { padding-bottom: 24px; }
+  main { padding-bottom: 24px; max-width: 640px; }
+  .app-header { max-width: 800px; }
+}
+
+/* =========================================================
+   ElevenLabs Conversational AI widget — match FitPulse brand
+   (see https://elevenlabs.io/docs/conversational-ai/customization/widget)
+   ========================================================= */
+elevenlabs-convai {
+  --el-convai-primary-color: #ff6b1a;
+  --el-convai-background-color: #1e1812;
+  --el-convai-text-color: #f5f1ea;
+}
+
+/* =========================================================
+   Layout containers
+   ========================================================= */
+main { max-width: var(--content-max); margin: 0 auto; padding: 0 20px; }
+.view-title { font-size: clamp(28px, 7vw, 34px); padding: 8px 0 16px; }
+.subhead { font-size: 20px; margin: 20px 0 12px; }
+
+.section { margin-top: 28px; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.section-head h2 { font-size: 22px; }
+.text-link { font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+
+/* =========================================================
+   Hero
+   ========================================================= */
+.hero {
+  background: var(--accent-grad);
+  border-radius: var(--radius-lg);
+  padding: 22px 22px 24px;
+  margin-top: 14px;
+  color: #1b0f04;
+  position: relative;
+  overflow: hidden;
+}
+.hero-art { position: absolute; top: -10px; right: -10px; width: 130px; height: 130px; z-index: 0; }
+.hero-eyebrow, .hero h1, .hero-sub, .hero .btn { position: relative; z-index: 1; }
+.hero-eyebrow { margin: 0 0 6px; font-size: 13px; font-weight: 600; opacity: 0.75; }
+.hero h1 { font-size: clamp(30px, 8vw, 38px); margin-bottom: 6px; }
+.hero-sub { margin: 0 0 18px; font-size: 15px; opacity: 0.85; max-width: 30ch; }
+
+.btn {
+  border: none; border-radius: var(--radius-sm);
+  min-height: 48px; padding: 0 22px;
+  font-family: var(--font-body); font-weight: 600; font-size: 15px;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.btn svg { width: 16px; height: 16px; fill: currentColor; }
+.btn:hover { filter: brightness(1.08); }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: #1b0f04; color: #fff; box-shadow: var(--shadow-card); }
+.hero .btn-primary { background: #1b0f04; color: #ffe9d6; }
+.hero .btn-primary:hover { box-shadow: 0 10px 26px rgba(27, 15, 4, 0.4); }
+.btn-compact { min-height: 44px; padding: 0 18px; }
+.btn-round { width: 68px; height: 68px; border-radius: 50%; padding: 0; box-shadow: var(--shadow-pop); }
+.btn-round svg { width: 26px; height: 26px; fill: currentColor; }
+.btn-round:hover { filter: brightness(1.1); }
+
+/* =========================================================
+   Week tabs + day grid
+   ========================================================= */
+.week-tabs { display: flex; gap: 6px; }
+.week-tab {
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer;
+  min-height: 32px;
+}
+.week-tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #1b0f04; }
+
+.day-grid { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-card); }
+.day-grid-kcal { font-size: 13px; color: var(--text-muted); margin: 0 0 12px; display: flex; align-items: center; gap: 6px; }
+.day-grid-kcal svg { width: 15px; height: 15px; fill: var(--accent-2); }
+.day-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.day-pill {
+  aspect-ratio: 1; border-radius: var(--radius-sm);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer; min-height: 44px;
+  font-family: inherit; transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.day-pill:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow-card); }
+.day-pill:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+.day-pill .day-num { font-family: var(--font-display); font-size: 16px; color: var(--text); }
+.day-pill.is-done { background: var(--accent-grad); color: #1b0f04; border-color: transparent; }
+.day-pill.is-done .day-num { color: #1b0f04; }
+.day-pill.is-rest { opacity: 0.5; cursor: not-allowed; }
+.day-pill.is-today { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+
+/* =========================================================
+   Target grid
+   ========================================================= */
+.target-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.target-card {
+  position: relative; border-radius: var(--radius-md); overflow: hidden;
+  aspect-ratio: 4 / 3; border: 2px solid transparent; cursor: pointer;
+  padding: 0; font-family: inherit;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.target-card:hover { transform: translateY(-3px); }
+.target-card:active { transform: translateY(-1px) scale(0.98); }
+.target-card-icon {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  opacity: 0.95; transition: transform 0.2s ease;
+}
+.target-card-icon svg { width: 42%; height: 42%; fill: none; stroke: rgba(255,255,255,0.92); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.target-card:hover .target-card-icon { transform: scale(1.08) translateY(-2px); }
+.target-card-label {
+  position: absolute; left: 12px; bottom: 10px; z-index: 2;
+  font-weight: 700; font-size: 15px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.35);
+}
+.target-card[aria-pressed="true"] { border-color: var(--accent-2); }
+.target-card[aria-pressed="true"]::after {
+  content: "✓"; position: absolute; top: 8px; right: 8px; z-index: 2;
+  width: 22px; height: 22px; border-radius: 50%; background: var(--accent-2);
+  color: #1b0f04; font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Per-area identity — each target keeps its own gradient personality */
+.target-card--full-body { background: linear-gradient(150deg, #ff6b1a, #b3390a); }
+.target-card--arm       { background: linear-gradient(150deg, #ffb020, #b5720a); }
+.target-card--abs       { background: linear-gradient(150deg, #ff4d4d, #8f1616); }
+.target-card--leg       { background: linear-gradient(150deg, #2dd4bf, #0f766e); }
+.target-card--back      { background: linear-gradient(150deg, #6d7bff, #2c2d8f); }
+.target-card--butt      { background: linear-gradient(150deg, #ff7ab8, #a3225f); }
+
+/* =========================================================
+   Progress preview card + sparkline
+   ========================================================= */
+.progress-preview-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  box-shadow: var(--shadow-card);
+}
+.stat-value { font-family: var(--font-display); font-size: 30px; margin: 0; line-height: 1; }
+.stat-label { margin: 4px 0 0; font-size: 13px; color: var(--text-muted); }
+.sparkline { width: 130px; height: 44px; }
+.sparkline path { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* =========================================================
+   Discover view
+   ========================================================= */
+.chip-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 4px; scrollbar-width: none; }
+.chip-row::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; min-height: 36px;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.chip svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chip:hover { border-color: var(--accent); color: var(--text); }
+.chip[aria-pressed="true"] { background: var(--accent-grad); color: #1b0f04; border-color: transparent; }
+
+.workout-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.workout-item {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 12px; cursor: pointer; text-align: left; width: 100%; color: var(--text);
+  box-shadow: var(--shadow-card); font-family: inherit;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.workout-item:hover { transform: translateY(-2px); border-color: var(--accent); }
+.workout-item:active { transform: translateY(0) scale(0.99); }
+.workout-thumb {
+  width: 56px; height: 56px; border-radius: var(--radius-sm); flex: 0 0 auto;
+  background: var(--accent-grad); display: flex; align-items: center; justify-content: center;
+}
+.workout-thumb svg { width: 26px; height: 26px; fill: none; stroke: rgba(255,255,255,0.95); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.workout-thumb--full-body { background: linear-gradient(150deg, #ff6b1a, #b3390a); }
+.workout-thumb--arm       { background: linear-gradient(150deg, #ffb020, #b5720a); }
+.workout-thumb--abs       { background: linear-gradient(150deg, #ff4d4d, #8f1616); }
+.workout-thumb--leg       { background: linear-gradient(150deg, #2dd4bf, #0f766e); }
+.workout-thumb--back      { background: linear-gradient(150deg, #6d7bff, #2c2d8f); }
+.workout-thumb--butt      { background: linear-gradient(150deg, #ff7ab8, #a3225f); }
+.workout-thumb--chest     { background: linear-gradient(150deg, #a3e635, #3f6212); }
+.workout-name { margin: 0 0 3px; font-weight: 700; font-size: 15px; }
+.workout-meta { margin: 0; font-size: 13px; color: var(--text-muted); }
+.workout-item > span:nth-child(2) { flex: 1; }
+.workout-chevron { width: 18px; height: 18px; fill: none; stroke: var(--text-muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+
+/* =========================================================
+   Progress / log view
+   ========================================================= */
+.log-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 16px; margin-top: 12px; box-shadow: var(--shadow-card);
+}
+.field-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+.log-row { display: flex; gap: 10px; }
+input[type="number"] {
+  flex: 1; min-height: 48px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font-size: 16px; padding: 0 14px; font-family: var(--font-body);
+}
+.field-hint { min-height: 18px; margin: 8px 0 0; font-size: 13px; color: var(--success); }
+
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+.stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; text-align: center; box-shadow: var(--shadow-card); }
+.stat-box .stat-value { font-size: 22px; }
+
+.chart { width: 100%; height: auto; margin-top: 8px; }
+.chart .grid-line { stroke: var(--border); stroke-width: 1; }
+.chart .trend-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.chart .trend-fill { fill: url(#trendFill); opacity: 0.25; }
+.chart .trend-dot { fill: var(--accent-2); }
+
+/* =========================================================
+   Views
+   ========================================================= */
+.view { padding-top: 4px; padding-bottom: 24px; }
+
+/* =========================================================
+   Tab bar
+   ========================================================= */
+.tab-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: flex; justify-content: space-around;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
+  padding: 8px 8px calc(8px + var(--safe-bottom));
+}
+.tab-btn {
+  background: none; border: none; color: var(--text-muted);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 600; padding: 6px 18px; border-radius: var(--radius-sm);
+  cursor: pointer; min-height: 44px;
+}
+.tab-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tab-btn.is-active { color: var(--accent); }
+
+/* =========================================================
+   Banners / toasts
+   ========================================================= */
+.offline-banner, .update-toast, .install-banner {
+  position: fixed; left: 12px; right: 12px; z-index: 60;
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  font-size: 14px; display: flex; align-items: center; gap: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.offline-banner {
+  top: calc(10px + var(--safe-top)); background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+}
+.update-toast {
+  bottom: calc(var(--tab-bar-h) + var(--safe-bottom) + 12px);
+  background: var(--text); color: var(--bg); justify-content: space-between;
+}
+.update-toast button { background: none; border: none; color: inherit; font-weight: 700; cursor: pointer; }
+.install-banner {
+  bottom: calc(var(--tab-bar-h) + var(--safe-bottom) + 12px);
+  background: var(--surface); border: 1px solid var(--border); align-items: center;
+}
+.install-title { margin: 0; font-weight: 700; font-size: 14px; }
+.install-sub { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
+
+/* =========================================================
+   Workout player overlay
+   ========================================================= */
+.player {
+  position: fixed; inset: 0; z-index: 80; background: var(--bg);
+  padding: calc(16px + var(--safe-top)) 24px calc(24px + var(--safe-bottom));
+  display: flex; flex-direction: column; align-items: center;
+}
+.player-top { width: 100%; display: flex; align-items: center; gap: 14px; }
+.player-progress { flex: 1; height: 4px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.player-progress span { display: block; height: 100%; width: 16%; background: var(--accent-grad); transition: width 0.3s ease; }
+.player-eyebrow { margin: 32px 0 6px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.player h2 { font-size: clamp(30px, 9vw, 40px); text-align: center; }
+.player-timer { font-family: var(--font-display); font-size: clamp(56px, 22vw, 84px); margin: 24px 0; color: var(--accent-2); }
+.player-controls { display: flex; align-items: center; gap: 20px; margin-top: auto; }
+
+/* =========================================================
+   Responsive
+   ========================================================= */
+@media (min-width: 560px) {
+  .target-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+  </style>
+</head>
+<body>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ============ SIGN-IN (first-visit profile screen) ============ -->
+  <div id="auth-screen" class="auth-screen" hidden role="dialog" aria-modal="true" aria-labelledby="auth-title">
+    <svg class="brand-mark auth-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 1 5 13h5l-1 10 8-13h-5l1-9z" /></svg>
+    <h1 id="auth-title">Welcome to FitPulse</h1>
+    <p class="auth-sub">Tell us your name so your plan, progress, and coach feel like yours.</p>
+    <form id="auth-form" class="auth-form">
+      <label class="visually-hidden" for="auth-name">Your name</label>
+      <input id="auth-name" name="name" type="text" placeholder="Your name" autocomplete="given-name" required maxlength="40" />
+      <button class="btn btn-primary" type="submit">Continue</button>
+    </form>
+    <button id="auth-guest" class="text-link auth-guest" type="button">Continue as guest</button>
+  </div>
+
+  <!-- Offline banner -->
+  <div id="offline-banner" class="offline-banner" role="status" aria-live="polite" hidden>
+    You're offline — showing your saved plan.
+  </div>
+
+  <!-- Update available toast -->
+  <div id="update-toast" class="update-toast" role="status" aria-live="polite" hidden>
+    <span>A new version is ready.</span>
+    <button id="update-reload" type="button">Reload</button>
+    <button id="update-dismiss" type="button" aria-label="Dismiss">✕</button>
+  </div>
+
+  <header class="app-header">
+    <span class="brand">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M13 1 5 13h5l-1 10 8-13h-5l1-9z" />
+      </svg>
+      FitPulse
+    </span>
+
+    <nav class="menu-bar" aria-label="Primary">
+      <button class="menu-link is-active" type="button" data-nav="home" aria-current="page">Home</button>
+      <button class="menu-link" type="button" data-nav="discover">Discover</button>
+      <button class="menu-link" type="button" data-nav="progress">Progress</button>
+    </nav>
+
+    <div class="header-actions">
+      <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch to light mode" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+      </button>
+      <button id="menu-toggle" class="icon-btn menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="menu-drawer">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="menu-scrim" class="menu-scrim" hidden></div>
+  <aside id="menu-drawer" class="menu-drawer" hidden aria-label="Menu">
+    <div class="menu-drawer-head">
+      <span class="brand">
+        <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 1 5 13h5l-1 10 8-13h-5l1-9z" /></svg>
+        FitPulse
+      </span>
+      <button id="menu-close" class="icon-btn" type="button" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="menu-drawer-profile" id="menu-drawer-profile" hidden>
+      <div class="menu-drawer-avatar" id="menu-drawer-avatar" aria-hidden="true"></div>
+      <div>
+        <p class="menu-drawer-name" id="menu-drawer-name"></p>
+        <button id="menu-drawer-switch" class="text-link" type="button">Not you? Switch profile</button>
+      </div>
+    </div>
+    <nav class="menu-drawer-links" aria-label="Primary">
+      <button class="menu-drawer-link" type="button" data-nav="home">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg>
+        Home
+      </button>
+      <button class="menu-drawer-link" type="button" data-nav="discover">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        Discover
+      </button>
+      <button class="menu-drawer-link" type="button" data-nav="progress">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19V9m7 10V4m7 15v-6"/></svg>
+        Progress
+      </button>
+      <button class="menu-drawer-link" type="button" id="menu-drawer-security">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/></svg>
+        Security
+      </button>
+    </nav>
+    <p class="menu-drawer-note">FitPulse works offline once installed — your plan and progress stay on this device.</p>
+  </aside>
+
+  <main id="main">
+
+    <!-- ============ HOME ============ -->
+    <section id="view-home" class="view" data-view="home">
+
+      <section class="hero" aria-labelledby="hero-heading">
+        <svg class="hero-art" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+          <circle cx="150" cy="50" r="90" fill="rgba(27,15,4,0.10)" />
+          <path d="M40 150 L60 90 L80 130 L100 60 L120 150" fill="none" stroke="rgba(27,15,4,0.35)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <p class="hero-eyebrow" id="hero-day-label">Day 3 of Week 1</p>
+        <p class="hero-greeting" id="hero-greeting" hidden></p>
+        <h1 id="hero-heading">Full Body, 14 minutes</h1>
+        <p class="hero-sub">Bodyweight only. No equipment needed today.</p>
+        <button id="start-workout" class="btn btn-primary" type="button">
+          Start today's workout
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4l14 8-14 8V4z"/></svg>
+        </button>
+      </section>
+
+      <section class="section" aria-labelledby="plan-heading">
+        <div class="section-head">
+          <h2 id="plan-heading">Your 4-week plan</h2>
+          <div class="week-tabs" role="tablist" aria-label="Select week" id="week-tabs"></div>
+        </div>
+        <div id="week-grid" class="day-grid" role="tabpanel"></div>
+      </section>
+
+      <section class="section" aria-labelledby="target-heading">
+        <h2 id="target-heading">Target a key area</h2>
+        <div class="target-grid" id="target-grid" role="group" aria-label="Choose a body area to focus on"></div>
+      </section>
+
+      <section class="section" aria-labelledby="progress-preview-heading">
+        <div class="section-head">
+          <h2 id="progress-preview-heading">Progress</h2>
+          <a class="text-link" href="#" data-nav="progress">See all</a>
+        </div>
+        <div class="progress-preview-card">
+          <div>
+            <p class="stat-value" id="preview-weight">—</p>
+            <p class="stat-label">Current weight</p>
+          </div>
+          <svg id="preview-sparkline" class="sparkline" viewBox="0 0 220 60" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </div>
+      </section>
+
+    </section>
+
+    <!-- ============ DISCOVER ============ -->
+    <section id="view-discover" class="view" data-view="discover" hidden>
+      <h1 class="view-title">Discover</h1>
+      <div class="chip-row" id="discover-chips" role="group" aria-label="Filter workouts by area"></div>
+      <h2 class="subhead">Hottest right now</h2>
+      <ul class="workout-list" id="discover-list"></ul>
+    </section>
+
+    <!-- ============ PROGRESS ============ -->
+    <section id="view-progress" class="view" data-view="progress" hidden>
+      <h1 class="view-title">Track daily progress</h1>
+
+      <form id="log-form" class="log-card" aria-labelledby="log-heading">
+        <h2 id="log-heading" class="visually-hidden">Log today's weight</h2>
+        <label class="field-label" for="weight-input">Today's weight (kg)</label>
+        <div class="log-row">
+          <input id="weight-input" name="weight" type="number" inputmode="decimal" step="0.1" min="30" max="300" placeholder="77.2" required />
+          <button class="btn btn-primary btn-compact" type="submit">Log</button>
+        </div>
+        <p id="log-feedback" class="field-hint" role="status" aria-live="polite"></p>
+      </form>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <p class="stat-value" id="stat-workouts">0</p>
+          <p class="stat-label">Workouts</p>
+        </div>
+        <div class="stat-box">
+          <p class="stat-value" id="stat-kcal">0</p>
+          <p class="stat-label">kcal burned</p>
+        </div>
+        <div class="stat-box">
+          <p class="stat-value" id="stat-minutes">0</p>
+          <p class="stat-label">Minutes</p>
+        </div>
+      </div>
+
+      <h2 class="subhead">Weight trend</h2>
+      <svg id="chart-svg" class="chart" viewBox="0 0 320 140" role="img" aria-label="Weight trend over the last logged entries"></svg>
+    </section>
+
+  </main>
+
+  <!-- ============ WORKOUT PLAYER (overlay) ============ -->
+  <div id="player" class="player" hidden role="dialog" aria-modal="true" aria-labelledby="player-title">
+    <div class="player-top">
+      <button id="player-close" class="icon-btn" type="button" aria-label="Close workout">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <div class="player-progress" aria-hidden="true"><span id="player-progress-fill"></span></div>
+    </div>
+    <p class="player-eyebrow" id="player-step-label">Exercise 1 of 6</p>
+    <h2 id="player-title">Donkey Kicks</h2>
+    <p id="player-timer" class="player-timer">00:25</p>
+    <div class="player-controls">
+      <button id="player-prev" class="icon-btn icon-btn-lg" type="button" aria-label="Previous exercise">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 4 8 12l10 8V4z"/></svg>
+      </button>
+      <button id="player-toggle" class="btn btn-primary btn-round" type="button" aria-label="Pause">
+        <svg id="icon-pause" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4h4v16H7zM13 4h4v16h-4z"/></svg>
+        <svg id="icon-play" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden><path d="M7 4l14 8-14 8V4z"/></svg>
+      </button>
+      <button id="player-next" class="icon-btn icon-btn-lg" type="button" aria-label="Next exercise">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4l10 8-10 8V4z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ INSTALL PROMPT ============ -->
+  <div id="install-banner" class="install-banner" hidden>
+    <div>
+      <p class="install-title">Install FitPulse</p>
+      <p class="install-sub">Add it to your home screen for offline workouts.</p>
+    </div>
+    <button id="install-btn" class="btn btn-primary btn-compact" type="button">Install</button>
+    <button id="install-dismiss" class="icon-btn" type="button" aria-label="Dismiss">✕</button>
+  </div>
+
+  <nav class="tab-bar" aria-label="Primary">
+    <button class="tab-btn is-active" type="button" data-nav="home" aria-current="page">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg>
+      Home
+    </button>
+    <button class="tab-btn" type="button" data-nav="discover">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      Discover
+    </button>
+    <button class="tab-btn" type="button" data-nav="progress">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19V9m7 10V4m7 15v-6"/></svg>
+      Progress
+    </button>
+  </nav>
+
+  <!-- ============ LOCK SCREEN (shown at boot if any method enrolled) ============ -->
+  <div id="lock-screen" class="lock-screen" hidden role="dialog" aria-modal="true" aria-labelledby="lock-title">
+    <svg class="brand-mark auth-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/></svg>
+    <h1 id="lock-title">Verify it's you</h1>
+    <p class="auth-sub">Checked entirely on this device — nothing is sent anywhere.</p>
+
+    <div id="lock-method-face" class="lock-method" hidden>
+      <button id="lock-face-btn" class="btn btn-primary" type="button">Verify with Face Unlock</button>
+      <p id="lock-face-feedback" class="field-hint" role="status" aria-live="polite"></p>
+    </div>
+
+    <div id="lock-method-webauthn" class="lock-method" hidden>
+      <button id="lock-webauthn-btn" class="btn btn-primary" type="button">Verify with device passkey</button>
+      <p id="lock-webauthn-feedback" class="field-hint" role="status" aria-live="polite"></p>
+    </div>
+
+    <div id="lock-method-password" class="lock-method" hidden>
+      <form id="lock-password-form" class="auth-form">
+        <label class="visually-hidden" for="lock-password-username">Username</label>
+        <input id="lock-password-username" type="text" placeholder="Username" autocomplete="username" required />
+        <label class="visually-hidden" for="lock-password-pass">Password</label>
+        <input id="lock-password-pass" type="password" placeholder="Password" autocomplete="current-password" required />
+        <button class="btn btn-primary" type="submit">Sign in</button>
+      </form>
+      <p id="lock-password-feedback" class="field-hint" role="status" aria-live="polite"></p>
+      <button id="lock-forgot-link" class="text-link" type="button" hidden>Forgot password?</button>
+    </div>
+
+    <div id="lock-forgot-otp-panel" class="lock-method" hidden>
+      <p class="field-hint">Enter the 6-digit code from your recovery authenticator app.</p>
+      <form id="lock-forgot-otp-form" class="auth-form">
+        <label class="visually-hidden" for="lock-forgot-otp-code">6-digit code</label>
+        <input id="lock-forgot-otp-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="6-digit code" autocomplete="one-time-code" required />
+        <button class="btn btn-primary" type="submit">Verify code</button>
+      </form>
+    </div>
+
+    <div id="lock-forgot-newpass-panel" class="lock-method" hidden>
+      <p class="field-hint">Set a new password.</p>
+      <form id="lock-forgot-newpass-form" class="auth-form">
+        <label class="visually-hidden" for="lock-forgot-newpass">New password</label>
+        <input id="lock-forgot-newpass" type="password" placeholder="New password" autocomplete="new-password" required />
+        <label class="visually-hidden" for="lock-forgot-newpass-confirm">Confirm new password</label>
+        <input id="lock-forgot-newpass-confirm" type="password" placeholder="Confirm new password" autocomplete="new-password" required />
+        <button class="btn btn-primary" type="submit">Save new password</button>
+      </form>
+      <p id="lock-forgot-newpass-feedback" class="field-hint" role="status" aria-live="polite"></p>
+    </div>
+    <p id="lock-forgot-feedback" class="field-hint" role="status" aria-live="polite"></p>
+  </div>
+
+  <!-- ============ FACE CAMERA CONSENT (must be accepted before any camera access) ============ -->
+  <div id="face-consent-screen" class="auth-screen" hidden role="dialog" aria-modal="true" aria-labelledby="face-consent-title">
+    <svg class="brand-mark auth-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 9v6M9 12h6"/><circle cx="12" cy="12" r="9"/></svg>
+    <h1 id="face-consent-title">Use your camera?</h1>
+    <p class="auth-sub">FitPulse wants to turn on your camera to recognize your face for the unlock gate. The image is processed on this device only — nothing is uploaded, recorded, or sent to any server. You can delete this data at any time from Security.</p>
+    <div class="auth-form">
+      <button id="face-consent-allow" class="btn btn-primary" type="button">Allow camera</button>
+      <button id="face-consent-deny" class="text-link auth-guest" type="button">Not now</button>
+    </div>
+  </div>
+
+  <!-- Shared hidden video element used for face capture -->
+  <video id="face-capture-video" playsinline muted style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none;"></video>
+
+  <!-- ============ SECURITY CENTER ============ -->
+  <div id="security-center" class="security-center" hidden role="dialog" aria-modal="true" aria-labelledby="security-title">
+    <div class="security-header">
+      <h1 id="security-title">Security</h1>
+      <button id="security-close" class="icon-btn" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <p class="security-intro">Every method below is checked on this device only — there's no server. Treat it as a device lock, not account security. Turn on as many, or as few, as you like.</p>
+
+    <section class="security-row">
+      <div class="security-row-head">
+        <div>
+          <p class="security-row-title">Username & password</p>
+          <p class="security-row-status" id="sec-password-status">Not set up</p>
+        </div>
+        <button id="sec-password-setup-btn" class="btn btn-compact btn-primary" type="button">Set up</button>
+        <button id="sec-password-remove-btn" class="text-link" type="button" hidden>Remove</button>
+      </div>
+      <div id="sec-password-setup-panel" class="security-panel" hidden>
+        <form id="sec-password-setup-form" class="auth-form">
+          <input id="sec-password-username" type="text" placeholder="Choose a username" autocomplete="username" required />
+          <input id="sec-password-pass" type="password" placeholder="Choose a password" autocomplete="new-password" required />
+          <input id="sec-password-confirm" type="password" placeholder="Confirm password" autocomplete="new-password" required />
+          <button class="btn btn-primary btn-compact" type="submit">Save</button>
+        </form>
+        <p id="sec-password-feedback" class="field-hint" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="security-row">
+      <div class="security-row-head">
+        <div>
+          <p class="security-row-title">Recovery code (OTP)</p>
+          <p class="security-row-status" id="sec-totp-status">Not set up</p>
+        </div>
+        <button id="sec-totp-setup-btn" class="btn btn-compact btn-primary" type="button">Set up</button>
+        <button id="sec-totp-remove-btn" class="text-link" type="button" hidden>Remove</button>
+      </div>
+      <p class="field-hint">Used only to reset your password if you forget it — set this up so you're never locked out.</p>
+      <div id="sec-totp-setup-panel" class="security-panel" hidden>
+        <p class="field-hint">Add this key in Google Authenticator, Authy, or any TOTP app (manual entry, not a QR scan):</p>
+        <p class="sec-totp-secret" id="sec-totp-secret"></p>
+        <form id="sec-totp-confirm-form" class="log-row">
+          <input id="sec-totp-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Enter the 6-digit code" required />
+          <button class="btn btn-primary btn-compact" type="submit">Confirm</button>
+        </form>
+        <p id="sec-totp-feedback" class="field-hint" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="security-row">
+      <div class="security-row-head">
+        <div>
+          <p class="security-row-title">Device passkey (WebAuthn)</p>
+          <p class="security-row-status" id="sec-webauthn-status">Not registered</p>
+        </div>
+        <button id="sec-webauthn-register-btn" class="btn btn-compact btn-primary" type="button">Register</button>
+        <button id="sec-webauthn-remove-btn" class="text-link" type="button" hidden>Remove</button>
+      </div>
+      <p id="sec-webauthn-feedback" class="field-hint" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="security-row">
+      <div class="security-row-head">
+        <div>
+          <p class="security-row-title">Face unlock</p>
+          <p class="security-row-status" id="sec-face-status">Not set up</p>
+        </div>
+        <button id="sec-face-enable-btn" class="btn btn-compact btn-primary" type="button">Set up</button>
+        <button id="sec-face-remove-btn" class="text-link" type="button" hidden>Remove</button>
+      </div>
+      <p id="sec-face-feedback" class="field-hint" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="security-row">
+      <p class="security-row-title">Recent attempts</p>
+      <ul id="sec-log-list" class="sec-log-list"></ul>
+    </section>
+
+    <button id="sec-wipe-all-btn" class="btn btn-compact security-wipe-btn" type="button">Delete all security data</button>
+  </div>
+
+  <script>
+// data.js — static plan & workout content, no DOM or storage logic here.
+// Area ids are shared across PLAN days, TARGET_AREAS, and WORKOUTS so a tap
+// anywhere in the app can resolve to the right icon and exercise set.
+
+// Hand-drawn, brand-consistent line icons (24x24, stroke-based) — no emoji,
+// no external images, so everything keeps working offline.
+const ICONS = {
+  "full-body": '<path d="M12 2.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z"/><path d="M12 8v6M12 8 7 10M12 8l5 2M12 14l-3 7M12 14l3 7"/>',
+  arm: '<circle cx="4.5" cy="8" r="1.6"/><circle cx="19.5" cy="8" r="1.6"/><path d="M6 8h2.5c.9 0 1.5.6 1.9 1.4l1 2.1a2 2 0 0 0 3.2 0l1-2.1c.4-.8 1-1.4 1.9-1.4H18"/><path d="M9.3 11.3 7 17M14.7 11.3 17 17"/>',
+  abs: '<path d="M12 3c2.5 2.6 4.5 5.4 4.5 8.6A4.5 4.5 0 0 1 12 16a4.5 4.5 0 0 1-4.5-4.4C7.5 8.4 9.5 5.6 12 3Z"/><path d="M12 9.2c.9.9 1.5 1.8 1.5 2.8a1.5 1.5 0 0 1-3 0c0-1 .6-1.9 1.5-2.8Z"/>',
+  leg: '<path d="M13 2 6 13h4l-1 9 7-12h-4l1-8z"/>',
+  back: '<path d="M12 3 5 9l2 1.6L12 6l5 4.6L19 9z"/><path d="M12 10 5 16l2 1.6L12 13l5 4.6L19 16z"/>',
+  butt: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8" fill="currentColor" stroke="none"/>',
+  chest: '<path d="M12 4 4 7v6c0 4 3.5 6.6 8 7 4.5-.4 8-3 8-7V7z"/>',
+};
+
+const AREA_META = {
+  "full-body": { label: "Full Body" },
+  arm: { label: "Arm" },
+  butt: { label: "Butt" },
+  abs: { label: "Abs" },
+  leg: { label: "Leg" },
+  back: { label: "Back" },
+  chest: { label: "Chest" },
+};
+
+function iconMarkup(key) {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[key] || ICONS["full-body"]}</svg>`;
+}
+
+// Normalizes a display label ("Full Body") to its area id ("full-body").
+function toAreaId(label) {
+  return label.toLowerCase().trim().replace(/\s+/g, "-");
+}
+
+const PLAN = [
+  { week: 1, kcal: 1890, days: [
+    { day: 1, type: "Chest", done: true },
+    { day: 2, type: "Abs", done: true },
+    { day: 3, type: "Full Body", done: false, today: true },
+    { day: 4, type: "Rest", rest: true },
+    { day: 5, type: "Chest", done: false },
+    { day: 6, type: "Abs", done: false },
+    { day: 7, type: "Arm", done: false },
+  ]},
+  { week: 2, kcal: 1920, days: [
+    { day: 1, type: "Arm", done: false },
+    { day: 2, type: "Chest", done: false },
+    { day: 3, type: "Abs", done: false },
+    { day: 4, type: "Rest", rest: true },
+    { day: 5, type: "Full Body", done: false },
+    { day: 6, type: "Rest", rest: true },
+    { day: 7, type: "Arm", done: false },
+  ]},
+  { week: 3, kcal: 1960, days: [
+    { day: 1, type: "Full Body", done: false },
+    { day: 2, type: "Abs", done: false },
+    { day: 3, type: "Arm", done: false },
+    { day: 4, type: "Chest", done: false },
+    { day: 5, type: "Rest", rest: true },
+    { day: 6, type: "Abs", done: false },
+    { day: 7, type: "Full Body", done: false },
+  ]},
+  { week: 4, kcal: 2005, days: [
+    { day: 1, type: "Chest", done: false },
+    { day: 2, type: "Full Body", done: false },
+    { day: 3, type: "Rest", rest: true },
+    { day: 4, type: "Abs", done: false },
+    { day: 5, type: "Arm", done: false },
+    { day: 6, type: "Full Body", done: false },
+    { day: 7, type: "Rest", rest: true },
+  ]},
+];
+
+const TARGET_AREAS = ["full-body", "arm", "butt", "abs", "leg", "back"].map((id) => ({
+  id,
+  label: AREA_META[id].label,
+}));
+
+const WORKOUTS = [
+  { id: "w1", name: "HIIT for Weight Loss", area: "full-body", minutes: 14, kcal: 120 },
+  { id: "w2", name: "Simple Arm Burn", area: "arm", minutes: 8, kcal: 60 },
+  { id: "w3", name: "Full Body Workout", area: "full-body", minutes: 14, kcal: 130 },
+  { id: "w4", name: "Shoulder & Back Sculpt", area: "back", minutes: 10, kcal: 80 },
+  { id: "w5", name: "Abs on Fire", area: "abs", minutes: 12, kcal: 95 },
+  { id: "w6", name: "Lower Body Burn", area: "leg", minutes: 15, kcal: 110 },
+  { id: "w7", name: "Peach Lift", area: "butt", minutes: 11, kcal: 90 },
+  { id: "w8", name: "Chest Press Basics", area: "chest", minutes: 10, kcal: 75 },
+];
+
+// Exercise sets per area — drives the workout player wherever it's opened from
+// (hero "Start", a day pill, a target card, or a Discover list item).
+const EXERCISES_BY_AREA = {
+  "full-body": [
+    { name: "Jumping Jacks", seconds: 30 },
+    { name: "Donkey Kicks", seconds: 25 },
+    { name: "Push-Ups", seconds: 30 },
+    { name: "Mountain Climbers", seconds: 30 },
+    { name: "Plank Hold", seconds: 30 },
+    { name: "Bodyweight Squats", seconds: 35 },
+  ],
+  arm: [
+    { name: "Arm Circles", seconds: 20 },
+    { name: "Push-Ups", seconds: 30 },
+    { name: "Tricep Dips", seconds: 25 },
+    { name: "Diamond Push-Ups", seconds: 25 },
+    { name: "Plank Shoulder Taps", seconds: 30 },
+  ],
+  abs: [
+    { name: "Crunches", seconds: 30 },
+    { name: "Plank Hold", seconds: 30 },
+    { name: "Bicycle Crunches", seconds: 30 },
+    { name: "Leg Raises", seconds: 25 },
+    { name: "Russian Twists", seconds: 30 },
+  ],
+  leg: [
+    { name: "Bodyweight Squats", seconds: 35 },
+    { name: "Lunges", seconds: 30 },
+    { name: "Wall Sit", seconds: 30 },
+    { name: "Calf Raises", seconds: 25 },
+    { name: "Jump Squats", seconds: 25 },
+  ],
+  back: [
+    { name: "Superman Hold", seconds: 25 },
+    { name: "Reverse Snow Angels", seconds: 25 },
+    { name: "Bird Dog", seconds: 30 },
+    { name: "Prone Y-Raise", seconds: 25 },
+  ],
+  butt: [
+    { name: "Donkey Kicks", seconds: 25 },
+    { name: "Glute Bridges", seconds: 30 },
+    { name: "Fire Hydrants", seconds: 25 },
+    { name: "Single-Leg Deadlift", seconds: 25 },
+  ],
+  chest: [
+    { name: "Push-Ups", seconds: 30 },
+    { name: "Incline Push-Ups", seconds: 25 },
+    { name: "Chest Squeeze Press", seconds: 25 },
+    { name: "Plank to Push-Up", seconds: 30 },
+  ],
+};
+
+// Backward-compatible default used by the hero "Start today's workout" button.
+const TODAY_EXERCISES = EXERCISES_BY_AREA["full-body"];
+
+
+// security.js — FitPulse local verification gate.
+//
+// IMPORTANT (read this before relying on it): this site has no backend.
+// Every check here — TOTP, WebAuthn, face match — runs and is verified
+// entirely inside the visitor's own browser. That makes it a genuine
+// *device gate* (useful to keep casual hands off the app, or as a personal
+// habit-lock) but it is NOT server-verified security: anyone who clears
+// this site's local storage, or edits the page's JS, can remove the gate.
+// Treat it the same way you'd treat a phone's app-lock, not a bank login.
+//
+// UAE PDPL (Federal Decree-Law No. 45 of 2021) note: a face descriptor is
+// biometric data, which the law treats as sensitive personal data. This
+// module is built around that: nothing is uploaded or sent anywhere —
+// detection and matching both run on-device — collection only happens
+// after the explicit consent screen (never silently), and there is a
+// one-tap permanent delete for the stored descriptor and every other
+// verification record. If you publish this publicly, also add a short
+// line in your own privacy notice saying face data stays on-device and
+// is deletable at any time — that's the other half of PDPL compliance,
+// and it has to be your words since it's your app.
+
+(() => {
+  "use strict";
+
+  const SEC_STORAGE = {
+    password: "fitpulse:security:password",
+    totp: "fitpulse:security:totp",
+    webauthn: "fitpulse:security:webauthn",
+    face: "fitpulse:security:face",
+    unlocked: "fitpulse:security:unlocked-session", // sessionStorage key
+    log: "fitpulse:security:log",
+  };
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+
+  function secGet(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  function secSet(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function secRemove(key) {
+    try { localStorage.removeItem(key); } catch { /* ignore */ }
+  }
+
+  /* ===========================================================
+     Attempt log — shared by every method
+     =========================================================== */
+  function logAttempt(method, success) {
+    const log = secGet(SEC_STORAGE.log, []);
+    log.push({ method, success, at: Date.now() });
+    secSet(SEC_STORAGE.log, log.slice(-20)); // keep the last 20
+    renderLog();
+  }
+
+  function renderLog() {
+    const list = $("#sec-log-list");
+    if (!list) return;
+    const log = secGet(SEC_STORAGE.log, []).slice().reverse();
+    if (!log.length) {
+      list.innerHTML = `<li class="sec-log-empty">No attempts yet.</li>`;
+      return;
+    }
+    list.innerHTML = log
+      .map((entry) => {
+        const time = new Date(entry.at).toLocaleString();
+        const label = { totp: "Authenticator code", webauthn: "Device passkey", face: "Face unlock" }[entry.method] || entry.method;
+        return `<li class="sec-log-row ${entry.success ? "is-success" : "is-fail"}">
+          <span>${label}</span><span>${entry.success ? "✓ Verified" : "✕ Failed"}</span><span>${time}</span>
+        </li>`;
+      })
+      .join("");
+  }
+
+  /* ===========================================================
+     Username & password — the primary lock-screen method.
+     Password is never stored in plaintext: PBKDF2-SHA256 (100k
+     iterations) with a random salt, via the Web Crypto API only.
+     Still local-only (see the file header) — this protects against
+     someone glancing at localStorage, not against someone reading
+     this file's source.
+     =========================================================== */
+  function randomSalt(len = 16) {
+    const s = new Uint8Array(len);
+    crypto.getRandomValues(s);
+    return s;
+  }
+
+  async function pbkdf2Hash(password, saltBytes, iterations = 100000) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
+    const bits = await crypto.subtle.deriveBits(
+      { name: "PBKDF2", hash: "SHA-256", salt: saltBytes, iterations },
+      keyMaterial,
+      256
+    );
+    return new Uint8Array(bits);
+  }
+
+  function bytesEqual(a, b) {
+    if (a.length !== b.length) return false;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+    return diff === 0;
+  }
+
+  async function passwordSetup(username, password) {
+    const salt = randomSalt();
+    const hash = await pbkdf2Hash(password, salt);
+    secSet(SEC_STORAGE.password, {
+      username: username.trim(),
+      salt: bufToBase64(salt),
+      hash: bufToBase64(hash),
+      iterations: 100000,
+    });
+  }
+
+  async function passwordVerify(username, password) {
+    const record = secGet(SEC_STORAGE.password, null);
+    if (!record) return false;
+    if (record.username.toLowerCase() !== username.trim().toLowerCase()) {
+      logAttempt("password", false);
+      return false;
+    }
+    const salt = base64ToBuf(record.salt);
+    const hash = await pbkdf2Hash(password, salt, record.iterations);
+    const ok = bytesEqual(hash, base64ToBuf(record.hash));
+    logAttempt("password", ok);
+    return ok;
+  }
+
+  function passwordEnabled() {
+    return !!secGet(SEC_STORAGE.password, null)?.username;
+  }
+
+  function passwordUsername() {
+    return secGet(SEC_STORAGE.password, null)?.username || "";
+  }
+
+  /* ===========================================================
+     TOTP — RFC 6238, implemented with the Web Crypto API only
+     (no external library, no server round-trip). Used as the
+     password-recovery factor: prove you hold the authenticator
+     code, then you're allowed to set a new password.
+     =========================================================== */
+  const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+  function base32Encode(bytes) {
+    let bits = "";
+    for (const b of bytes) bits += b.toString(2).padStart(8, "0");
+    let out = "";
+    for (let i = 0; i < bits.length; i += 5) {
+      out += BASE32_ALPHABET[parseInt(bits.substr(i, 5).padEnd(5, "0"), 2)];
+    }
+    return out;
+  }
+
+  function base32Decode(str) {
+    const clean = str.replace(/=+$/, "").toUpperCase().replace(/\s+/g, "");
+    let bits = "";
+    for (const c of clean) {
+      const val = BASE32_ALPHABET.indexOf(c);
+      if (val === -1) continue;
+      bits += val.toString(2).padStart(5, "0");
+    }
+    const bytes = [];
+    for (let i = 0; i + 8 <= bits.length; i += 8) bytes.push(parseInt(bits.substr(i, 8), 2));
+    return new Uint8Array(bytes);
+  }
+
+  function counterToBytes(counter) {
+    const buf = new ArrayBuffer(8);
+    const view = new DataView(buf);
+    view.setUint32(0, Math.floor(counter / 2 ** 32), false);
+    view.setUint32(4, counter >>> 0, false);
+    return new Uint8Array(buf);
+  }
+
+  async function hmacSha1(keyBytes, msgBytes) {
+    const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+    return new Uint8Array(await crypto.subtle.sign("HMAC", key, msgBytes));
+  }
+
+  async function totpAt(secretBytes, step, digits = 6) {
+    const hmac = await hmacSha1(secretBytes, counterToBytes(step));
+    const offset = hmac[hmac.length - 1] & 0x0f;
+    const bin =
+      ((hmac[offset] & 0x7f) << 24) |
+      ((hmac[offset + 1] & 0xff) << 16) |
+      ((hmac[offset + 2] & 0xff) << 8) |
+      (hmac[offset + 3] & 0xff);
+    return (bin % 10 ** digits).toString().padStart(digits, "0");
+  }
+
+  function currentStep() {
+    return Math.floor(Date.now() / 1000 / 30);
+  }
+
+  // Generates a new secret and stores it as *pending* (not yet enabled —
+  // enabling requires proving one live code, same flow authenticator apps use).
+  function totpSetup() {
+    const raw = new Uint8Array(20);
+    crypto.getRandomValues(raw);
+    const secret = base32Encode(raw);
+    secSet(SEC_STORAGE.totp, { secret, enabled: false });
+    return secret;
+  }
+
+  async function totpVerify(userCode, { enableIfPending = false } = {}) {
+    const record = secGet(SEC_STORAGE.totp, null);
+    if (!record?.secret) return false;
+    const secretBytes = base32Decode(record.secret);
+    const step = currentStep();
+    let ok = false;
+    for (let w = -1; w <= 1; w++) {
+      // eslint-disable-next-line no-await-in-loop
+      const code = await totpAt(secretBytes, step + w);
+      if (code === userCode.trim()) { ok = true; break; }
+    }
+    if (ok && enableIfPending && !record.enabled) {
+      secSet(SEC_STORAGE.totp, { ...record, enabled: true });
+    }
+    logAttempt("totp", ok);
+    return ok;
+  }
+
+  function totpEnabled() {
+    return !!secGet(SEC_STORAGE.totp, null)?.enabled;
+  }
+
+  /* ===========================================================
+     WebAuthn — device passkey / biometric gate.
+     No server, so we can't re-verify the cryptographic signature against
+     a stored public key from here in a meaningful way — instead the gate
+     *is* the platform authenticator ceremony itself: create()/get() only
+     resolve after the device's own Face ID / Touch ID / Windows Hello /
+     screen-lock challenge succeeds. That's a real local check even
+     without a backend; it just isn't independently re-verified.
+     =========================================================== */
+  function randomChallenge() {
+    const c = new Uint8Array(32);
+    crypto.getRandomValues(c);
+    return c;
+  }
+  function bufToBase64(buf) {
+    return btoa(String.fromCharCode(...new Uint8Array(buf)));
+  }
+  function base64ToBuf(b64) {
+    return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  }
+
+  async function webauthnRegister(displayName) {
+    if (!window.PublicKeyCredential) throw new Error("This browser/device doesn't support passkeys.");
+    const userId = new Uint8Array(16);
+    crypto.getRandomValues(userId);
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge: randomChallenge(),
+        rp: { name: "FitPulse" },
+        user: { id: userId, name: displayName || "fitpulse-user", displayName: displayName || "FitPulse" },
+        pubKeyCredParams: [
+          { type: "public-key", alg: -7 },   // ES256
+          { type: "public-key", alg: -257 }, // RS256
+        ],
+        authenticatorSelection: { userVerification: "required", authenticatorAttachment: "platform" },
+        timeout: 60000,
+        attestation: "none",
+      },
+    });
+    if (!cred) throw new Error("Registration was cancelled.");
+    secSet(SEC_STORAGE.webauthn, { credentialId: bufToBase64(cred.rawId), createdAt: Date.now() });
+  }
+
+  async function webauthnVerify() {
+    const record = secGet(SEC_STORAGE.webauthn, null);
+    if (!record?.credentialId) return false;
+    let ok = false;
+    try {
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          challenge: randomChallenge(),
+          allowCredentials: [{ id: base64ToBuf(record.credentialId), type: "public-key" }],
+          userVerification: "required",
+          timeout: 60000,
+        },
+      });
+      ok = !!assertion;
+    } catch {
+      ok = false;
+    }
+    logAttempt("webauthn", ok);
+    return ok;
+  }
+
+  function webauthnEnabled() {
+    return !!secGet(SEC_STORAGE.webauthn, null)?.credentialId;
+  }
+
+  /* ===========================================================
+     Face gate — face-api.js, loaded lazily (needs internet the first
+     time, to fetch the library + models; nothing is ever uploaded —
+     detection and matching both happen on-device, per the PDPL note
+     at the top of this file).
+     =========================================================== */
+  const FACE_LIB_URL = "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js";
+  const FACE_MODEL_URL = "https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js/weights/";
+  const FACE_MATCH_THRESHOLD = 0.55; // lower = stricter
+
+  let faceApiReady = null;
+  function loadFaceApi() {
+    if (faceApiReady) return faceApiReady;
+    const loadPromise = new Promise((resolve, reject) => {
+      if (window.faceapi) return resolve(window.faceapi);
+      const script = document.createElement("script");
+      script.src = FACE_LIB_URL;
+      script.onload = async () => {
+        try {
+          await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_URL),
+            faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL),
+            faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL),
+          ]);
+          resolve(window.faceapi);
+        } catch (err) {
+          reject(new Error("Couldn't download the face recognition models. Check your internet connection and try again."));
+        }
+      };
+      script.onerror = () => reject(new Error("Couldn't load the face recognition library. Check your internet connection, or this site's host may be blocking outside scripts."));
+      document.head.appendChild(script);
+    });
+    // Never hang forever on a stalled request — surface a real error instead.
+    faceApiReady = Promise.race([
+      loadPromise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("This is taking too long — the face recognition library didn't load in 20 seconds. Try again on a stronger connection.")), 20000)
+      ),
+    ]).catch((err) => {
+      faceApiReady = null; // allow retrying instead of getting stuck on a rejected promise forever
+      throw err;
+    });
+    return faceApiReady;
+  }
+
+  async function captureDescriptor(videoEl) {
+    const faceapi = await loadFaceApi();
+    const result = await faceapi
+      .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    if (!result) throw new Error("No face found — face the camera in good light and try again.");
+    return Array.from(result.descriptor);
+  }
+
+  function euclideanDistance(a, b) {
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) sum += (a[i] - b[i]) ** 2;
+    return Math.sqrt(sum);
+  }
+
+  function faceEnabled() {
+    return !!secGet(SEC_STORAGE.face, null)?.descriptor;
+  }
+
+  /* ===========================================================
+     Consent screen — must be explicitly accepted before any
+     getUserMedia() call anywhere in this module. Required both as
+     good practice and under PDPL for biometric collection.
+     =========================================================== */
+  function requestCameraConsent() {
+    return new Promise((resolve) => {
+      const screen = $("#face-consent-screen");
+      if (!screen) return resolve(false);
+      screen.hidden = false;
+      const onAllow = () => { cleanup(); resolve(true); };
+      const onDeny = () => { cleanup(); resolve(false); };
+      function cleanup() {
+        screen.hidden = true;
+        $("#face-consent-allow")?.removeEventListener("click", onAllow);
+        $("#face-consent-deny")?.removeEventListener("click", onDeny);
+      }
+      $("#face-consent-allow")?.addEventListener("click", onAllow, { once: true });
+      $("#face-consent-deny")?.addEventListener("click", onDeny, { once: true });
+    });
+  }
+
+  async function withCamera(fn) {
+    const consented = await requestCameraConsent();
+    if (!consented) throw new Error("Camera permission declined.");
+
+    let stream;
+    try {
+      // If the browser's own permission prompt never appears (e.g. blocked
+      // by the page being inside a restrictive iframe), don't hang forever.
+      stream = await Promise.race([
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("The camera didn't respond in 15 seconds. Your browser or this page may be blocking camera access.")), 15000)
+        ),
+      ]);
+    } catch (err) {
+      if (err.name === "NotAllowedError") throw new Error("Camera access was blocked. Check your browser's site permissions and allow the camera for this page.");
+      if (err.name === "NotFoundError") throw new Error("No camera was found on this device.");
+      if (err.name === "NotReadableError") throw new Error("The camera is already in use by another app.");
+      throw err instanceof Error ? err : new Error("Couldn't access the camera.");
+    }
+
+    const video = $("#face-capture-video");
+    video.srcObject = stream;
+    await video.play();
+    try {
+      return await fn(video);
+    } finally {
+      stream.getTracks().forEach((t) => t.stop());
+      video.srcObject = null;
+    }
+  }
+
+  /* ===========================================================
+     Delete all security data — the PDPL-required "erase my data"
+     control. One tap, no confirmation email, no delay.
+     =========================================================== */
+  function wipeSecurityData() {
+    secRemove(SEC_STORAGE.password);
+    secRemove(SEC_STORAGE.totp);
+    secRemove(SEC_STORAGE.webauthn);
+    secRemove(SEC_STORAGE.face);
+    secRemove(SEC_STORAGE.log);
+    try { sessionStorage.removeItem(SEC_STORAGE.unlocked); } catch { /* ignore */ }
+  }
+
+  function anyMethodEnabled() {
+    return passwordEnabled() || webauthnEnabled() || faceEnabled();
+  }
+
+  /* ===========================================================
+     Security Center UI wiring
+     =========================================================== */
+  function refreshSecurityCenterUI() {
+    const pwOn = passwordEnabled();
+    $("#sec-password-status").textContent = pwOn ? `Enabled (${passwordUsername()})` : "Not set up";
+    $("#sec-password-status").classList.toggle("is-on", pwOn);
+    $("#sec-password-setup-btn").hidden = pwOn;
+    $("#sec-password-remove-btn").hidden = !pwOn;
+    $("#sec-password-setup-panel").hidden = true;
+
+    const totpOn = totpEnabled();
+    $("#sec-totp-status").textContent = totpOn ? "Enabled" : "Not set up";
+    $("#sec-totp-status").classList.toggle("is-on", totpOn);
+    $("#sec-totp-setup-btn").hidden = totpOn;
+    $("#sec-totp-remove-btn").hidden = !totpOn;
+    $("#sec-totp-setup-panel").hidden = true;
+
+    const waOn = webauthnEnabled();
+    $("#sec-webauthn-status").textContent = waOn ? "Registered" : "Not registered";
+    $("#sec-webauthn-status").classList.toggle("is-on", waOn);
+    $("#sec-webauthn-register-btn").hidden = waOn;
+    $("#sec-webauthn-remove-btn").hidden = !waOn;
+
+    const faceOn = faceEnabled();
+    $("#sec-face-status").textContent = faceOn ? "Enabled" : "Not set up";
+    $("#sec-face-status").classList.toggle("is-on", faceOn);
+    $("#sec-face-enable-btn").hidden = faceOn;
+    $("#sec-face-remove-btn").hidden = !faceOn;
+
+    renderLog();
+  }
+
+  function initSecurityCenter() {
+    $("#menu-drawer-security")?.addEventListener("click", () => {
+      window.__fitpulseCloseMenuDrawer?.();
+      $("#security-center").hidden = false;
+      refreshSecurityCenterUI();
+    });
+    $("#security-close")?.addEventListener("click", () => { $("#security-center").hidden = true; });
+
+    // --- Username & password ---
+    $("#sec-password-setup-btn")?.addEventListener("click", () => {
+      $("#sec-password-setup-panel").hidden = false;
+      $("#sec-password-username").value = "";
+      $("#sec-password-pass").value = "";
+      $("#sec-password-confirm").value = "";
+      $("#sec-password-feedback").textContent = "";
+    });
+    $("#sec-password-setup-form")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = $("#sec-password-username").value.trim();
+      const pass = $("#sec-password-pass").value;
+      const confirm = $("#sec-password-confirm").value;
+      const feedback = $("#sec-password-feedback");
+      if (!username || pass.length < 4) {
+        feedback.textContent = "Enter a username and a password of at least 4 characters.";
+        feedback.classList.add("is-error");
+        return;
+      }
+      if (pass !== confirm) {
+        feedback.textContent = "Passwords don't match.";
+        feedback.classList.add("is-error");
+        return;
+      }
+      await passwordSetup(username, pass);
+      feedback.classList.remove("is-error");
+      feedback.textContent = "Password saved.";
+      refreshSecurityCenterUI();
+    });
+    $("#sec-password-remove-btn")?.addEventListener("click", () => {
+      secRemove(SEC_STORAGE.password);
+      refreshSecurityCenterUI();
+    });
+
+    // --- TOTP setup flow ---
+    $("#sec-totp-setup-btn")?.addEventListener("click", () => {
+      const secret = totpSetup();
+      $("#sec-totp-secret").textContent = secret.match(/.{1,4}/g).join(" ");
+      $("#sec-totp-setup-panel").hidden = false;
+      $("#sec-totp-code").value = "";
+      $("#sec-totp-feedback").textContent = "";
+    });
+    $("#sec-totp-confirm-form")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const code = $("#sec-totp-code").value;
+      const ok = await totpVerify(code, { enableIfPending: true });
+      $("#sec-totp-feedback").textContent = ok
+        ? "Authenticator app connected."
+        : "That code didn't match — check the time on your phone and try again.";
+      $("#sec-totp-feedback").classList.toggle("is-error", !ok);
+      if (ok) refreshSecurityCenterUI();
+    });
+    $("#sec-totp-remove-btn")?.addEventListener("click", () => {
+      secRemove(SEC_STORAGE.totp);
+      refreshSecurityCenterUI();
+    });
+
+    // --- WebAuthn ---
+    $("#sec-webauthn-register-btn")?.addEventListener("click", async () => {
+      const btn = $("#sec-webauthn-register-btn");
+      const feedback = $("#sec-webauthn-feedback");
+      btn.disabled = true;
+      feedback.textContent = "Follow your device's prompt…";
+      feedback.classList.remove("is-error");
+      try {
+        const profile = secGet("fitpulse:profile", null);
+        await webauthnRegister(profile?.name);
+        feedback.textContent = "Device passkey registered.";
+        refreshSecurityCenterUI();
+      } catch (err) {
+        feedback.textContent = err.message || "Couldn't register a passkey on this device.";
+        feedback.classList.add("is-error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    $("#sec-webauthn-remove-btn")?.addEventListener("click", () => {
+      secRemove(SEC_STORAGE.webauthn);
+      refreshSecurityCenterUI();
+    });
+
+    // --- Face gate ---
+    $("#sec-face-enable-btn")?.addEventListener("click", async () => {
+      const btn = $("#sec-face-enable-btn");
+      const feedback = $("#sec-face-feedback");
+      feedback.textContent = "";
+      feedback.classList.remove("is-error");
+      btn.disabled = true;
+      try {
+        const descriptor = await withCamera(async (video) => {
+          feedback.textContent = "Loading face recognition (first time only)…";
+          return captureDescriptor(video);
+        });
+        secSet(SEC_STORAGE.face, { descriptor, createdAt: Date.now() });
+        feedback.textContent = "Face unlock enabled.";
+        refreshSecurityCenterUI();
+      } catch (err) {
+        feedback.textContent = err.message || "Couldn't set up face unlock.";
+        feedback.classList.add("is-error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    $("#sec-face-remove-btn")?.addEventListener("click", () => {
+      secRemove(SEC_STORAGE.face);
+      refreshSecurityCenterUI();
+    });
+
+    $("#sec-wipe-all-btn")?.addEventListener("click", () => {
+      if (!confirm("Remove every verification method and the attempt log from this device? This can't be undone.")) return;
+      wipeSecurityData();
+      refreshSecurityCenterUI();
+    });
+  }
+
+  /* ===========================================================
+     Lock screen — shown at boot, only if at least one method is
+     enrolled. Verifying with ANY enrolled method unlocks the session.
+     =========================================================== */
+  function initLockScreen(onUnlock) {
+    if (!anyMethodEnabled()) return onUnlock();
+    let unlocked = false;
+    try { unlocked = sessionStorage.getItem(SEC_STORAGE.unlocked) === "1"; } catch { /* ignore */ }
+    if (unlocked) return onUnlock();
+
+    const screen = $("#lock-screen");
+    screen.hidden = false;
+
+    $("#lock-method-password").hidden = !passwordEnabled();
+    $("#lock-method-webauthn").hidden = !webauthnEnabled();
+    $("#lock-method-face").hidden = !faceEnabled();
+    $("#lock-forgot-link").hidden = !(passwordEnabled() && totpEnabled());
+
+    function unlock() {
+      unlocked = true;
+      try { sessionStorage.setItem(SEC_STORAGE.unlocked, "1"); } catch { /* ignore */ }
+      screen.hidden = true;
+      onUnlock();
+    }
+
+    $("#lock-password-form")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = $("#lock-password-username").value;
+      const pass = $("#lock-password-pass").value;
+      const feedback = $("#lock-password-feedback");
+      const ok = await passwordVerify(username, pass);
+      if (ok) return unlock();
+      feedback.textContent = "Incorrect username or password.";
+    });
+
+    $("#lock-webauthn-btn")?.addEventListener("click", async () => {
+      const feedback = $("#lock-webauthn-feedback");
+      feedback.textContent = "Follow your device's prompt…";
+      const ok = await webauthnVerify();
+      feedback.textContent = ok ? "" : "Verification failed. Try again.";
+      if (ok) unlock();
+    });
+
+    $("#lock-face-btn")?.addEventListener("click", async () => {
+      const btn = $("#lock-face-btn");
+      const feedback = $("#lock-face-feedback");
+      feedback.textContent = "";
+      btn.disabled = true;
+      try {
+        const stored = secGet(SEC_STORAGE.face, null);
+        const liveDescriptor = await withCamera(async (video) => {
+          feedback.textContent = "Checking your face…";
+          return captureDescriptor(video);
+        });
+        const distance = euclideanDistance(stored.descriptor, liveDescriptor);
+        const ok = distance < FACE_MATCH_THRESHOLD;
+        logAttempt("face", ok);
+        feedback.textContent = ok ? "" : "Face didn't match. Try again in good lighting.";
+        if (ok) unlock();
+      } catch (err) {
+        feedback.textContent = err.message || "Couldn't verify your face.";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // --- Forgot password → verify recovery code (OTP) → set a new password ---
+    $("#lock-forgot-link")?.addEventListener("click", () => {
+      $("#lock-method-password").hidden = true;
+      $("#lock-forgot-link").hidden = true;
+      $("#lock-forgot-otp-panel").hidden = false;
+      $("#lock-forgot-otp-code").value = "";
+      $("#lock-forgot-feedback").textContent = "";
+    });
+
+    $("#lock-forgot-otp-form")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const code = $("#lock-forgot-otp-code").value;
+      const feedback = $("#lock-forgot-feedback");
+      const ok = await totpVerify(code);
+      if (!ok) {
+        feedback.textContent = "That code didn't match.";
+        return;
+      }
+      feedback.textContent = "";
+      $("#lock-forgot-otp-panel").hidden = true;
+      $("#lock-forgot-newpass-panel").hidden = false;
+    });
+
+    $("#lock-forgot-newpass-form")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const pass = $("#lock-forgot-newpass").value;
+      const confirm = $("#lock-forgot-newpass-confirm").value;
+      const feedback = $("#lock-forgot-newpass-feedback");
+      if (pass.length < 4) {
+        feedback.textContent = "Password must be at least 4 characters.";
+        return;
+      }
+      if (pass !== confirm) {
+        feedback.textContent = "Passwords don't match.";
+        return;
+      }
+      await passwordSetup(passwordUsername(), pass);
+      unlock();
+    });
+  }
+
+  window.FitPulseSecurity = { initSecurityCenter, initLockScreen, wipeSecurityData };
+})();
+
+
+// app.js — FitPulse application logic.
+// Vanilla JS, modular by concern. Every DOM read/write is guarded so a
+// missing element (or a future markup change) never throws and blocks
+// the rest of the app from working — progressive enhancement in practice.
+
+(() => {
+  "use strict";
+
+  const STORAGE = {
+    theme: "fitpulse:theme",
+    weights: "fitpulse:weights",
+    stats: "fitpulse:stats",
+    target: "fitpulse:target",
+    profile: "fitpulse:profile",
+  };
+
+  /* ---------------------------------------------------------
+     Safe storage helpers — private browsing / quota errors
+     should degrade gracefully, never crash the app.
+     --------------------------------------------------------- */
+  const store = {
+    get(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    },
+    set(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+  };
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  /* ===========================================================
+     Theme
+     =========================================================== */
+  function initTheme() {
+    const toggle = $("#theme-toggle");
+    const saved = store.get(STORAGE.theme, null);
+    const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+    const theme = saved || (prefersLight ? "light" : "dark");
+    applyTheme(theme);
+
+    toggle?.addEventListener("click", () => {
+      const current = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+      const next = current === "light" ? "dark" : "light";
+      applyTheme(next);
+      store.set(STORAGE.theme, next);
+    });
+  }
+
+  function applyTheme(theme) {
+    if (theme === "light") {
+      document.documentElement.dataset.theme = "light";
+    } else {
+      delete document.documentElement.dataset.theme;
+    }
+    const toggle = $("#theme-toggle");
+    if (toggle) {
+      toggle.setAttribute("aria-pressed", String(theme === "light"));
+      toggle.setAttribute("aria-label", theme === "light" ? "Switch to dark mode" : "Switch to light mode");
+    }
+    const meta = $('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", theme === "light" ? "#f6f2ea" : "#14100d");
+  }
+
+  /* ===========================================================
+     Profile — lightweight on-device "sign-in" (no server/password;
+     see chat explanation). Personalizes the greeting and feeds the
+     visitor's name to the ElevenLabs voice widget.
+     =========================================================== */
+  function initProfile() {
+    const profile = store.get(STORAGE.profile, null);
+    if (profile?.name) {
+      applyProfile(profile);
+    } else {
+      showAuthScreen();
+    }
+
+    $("#auth-form")?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = $("#auth-name");
+      const name = input.value.trim();
+      if (!name) return;
+      const newProfile = { name, guest: false };
+      store.set(STORAGE.profile, newProfile);
+      applyProfile(newProfile);
+      hideAuthScreen();
+    });
+
+    $("#auth-guest")?.addEventListener("click", () => {
+      const guestProfile = { name: "Guest", guest: true };
+      store.set(STORAGE.profile, guestProfile);
+      applyProfile(guestProfile);
+      hideAuthScreen();
+    });
+
+    $("#menu-drawer-switch")?.addEventListener("click", () => {
+      closeMenuDrawer();
+      showAuthScreen();
+    });
+  }
+
+  function showAuthScreen() {
+    const screen = $("#auth-screen");
+    if (screen) screen.hidden = false;
+    $("#auth-name")?.focus();
+  }
+
+  function hideAuthScreen() {
+    const screen = $("#auth-screen");
+    if (screen) screen.hidden = true;
+  }
+
+  function applyProfile(profile) {
+    // Hero greeting
+    const greeting = $("#hero-greeting");
+    if (greeting) {
+      greeting.hidden = false;
+      greeting.textContent = profile.guest ? "Welcome 👋" : `Welcome back, ${profile.name} 👋`;
+    }
+    // Menu drawer profile block
+    const block = $("#menu-drawer-profile");
+    const nameEl = $("#menu-drawer-name");
+    const avatarEl = $("#menu-drawer-avatar");
+    if (block && nameEl && avatarEl) {
+      block.hidden = false;
+      nameEl.textContent = profile.name;
+      avatarEl.textContent = profile.name.trim().charAt(0).toUpperCase() || "?";
+    }
+    // Let the ElevenLabs voice widget address the visitor by name.
+    // Requires the agent's prompt/first message to reference {{user_name}}
+    // in the ElevenLabs dashboard.
+    const widget = $("elevenlabs-convai");
+    if (widget) {
+      widget.setAttribute("dynamic-variables", JSON.stringify({ user_name: profile.name }));
+    }
+  }
+  function initNav() {
+    const navButtons = $$("[data-nav]");
+    navButtons.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        goTo(btn.dataset.nav);
+        closeMenuDrawer();
+      });
+    });
+  }
+
+  function goTo(view) {
+    $$(".view").forEach((section) => {
+      section.hidden = section.dataset.view !== view;
+    });
+    // Keep every nav surface (bottom tabs, header menu, drawer) in sync.
+    $$(".tab-btn, .menu-link, .menu-drawer-link").forEach((btn) => {
+      const active = btn.dataset.nav === view;
+      btn.classList.toggle("is-active", active);
+      if (active) btn.setAttribute("aria-current", "page");
+      else btn.removeAttribute("aria-current");
+    });
+    window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+    if (view === "progress") renderProgressView();
+  }
+
+  /* ===========================================================
+     Mobile menu drawer (hamburger)
+     =========================================================== */
+  function initMenuDrawer() {
+    const toggle = $("#menu-toggle");
+    const closeBtn = $("#menu-close");
+    const scrim = $("#menu-scrim");
+    toggle?.addEventListener("click", openMenuDrawer);
+    closeBtn?.addEventListener("click", closeMenuDrawer);
+    scrim?.addEventListener("click", closeMenuDrawer);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeMenuDrawer();
+    });
+  }
+
+  function openMenuDrawer() {
+    $("#menu-drawer").hidden = false;
+    $("#menu-scrim").hidden = false;
+    $("#menu-toggle")?.setAttribute("aria-expanded", "true");
+    requestAnimationFrame(() => {
+      $("#menu-drawer")?.classList.add("is-open");
+      $("#menu-scrim")?.classList.add("is-open");
+    });
+  }
+
+  function closeMenuDrawer() {
+    const drawer = $("#menu-drawer");
+    const scrim = $("#menu-scrim");
+    if (!drawer || drawer.hidden) return;
+    drawer.classList.remove("is-open");
+    scrim?.classList.remove("is-open");
+    $("#menu-toggle")?.setAttribute("aria-expanded", "false");
+    setTimeout(() => {
+      drawer.hidden = true;
+      if (scrim) scrim.hidden = true;
+    }, 200);
+  }
+
+  /* ===========================================================
+     Home — weekly plan grid
+     =========================================================== */
+  let activeWeek = 1;
+
+  function initPlan() {
+    const tabs = $("#week-tabs");
+    if (!tabs) return;
+    tabs.innerHTML = PLAN.map(
+      (w) => `<button class="week-tab" role="tab" data-week="${w.week}" aria-selected="${w.week === activeWeek}">Week ${w.week}</button>`
+    ).join("");
+
+    tabs.addEventListener("click", (e) => {
+      const btn = e.target.closest(".week-tab");
+      if (!btn) return;
+      activeWeek = Number(btn.dataset.week);
+      $$(".week-tab", tabs).forEach((t) => t.setAttribute("aria-selected", String(t === btn)));
+      renderDayGrid();
+    });
+
+    renderDayGrid();
+  }
+
+  function renderDayGrid() {
+    const grid = $("#week-grid");
+    if (!grid) return;
+    const week = PLAN.find((w) => w.week === activeWeek);
+    if (!week) return;
+    grid.innerHTML = `
+      <p class="day-grid-kcal">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.5s6 5.8 6 10.5a6 6 0 1 1-12 0c0-1.6.8-3 1.7-4.2.2 1.4 1.1 2.2 1.9 2 .5-3.4 1-5.7 2.4-8.3Z"/></svg>
+        ${week.kcal} kcal planned this week
+      </p>
+      <div class="day-row">
+        ${week.days
+          .map((d) => {
+            const classes = ["day-pill"];
+            if (d.done) classes.push("is-done");
+            if (d.rest) classes.push("is-rest");
+            if (d.today) classes.push("is-today");
+            const label = d.rest ? "Rest" : d.type;
+            const disabled = d.rest ? "disabled" : "";
+            return `<button type="button" class="${classes.join(" ")}" data-day-type="${d.rest ? "" : d.type}" ${disabled}
+              title="Day ${d.day}: ${label}" aria-label="Day ${d.day}: ${label}${d.done ? ", completed" : ""}">
+              <span class="day-num">${d.day}</span>
+              <span>${d.rest ? "—" : d.done ? "✓" : label.slice(0, 4)}</span>
+            </button>`;
+          })
+          .join("")}
+      </div>`;
+
+    $$(".day-pill", grid).forEach((pill) => {
+      pill.addEventListener("click", () => {
+        const type = pill.dataset.dayType;
+        if (!type) return;
+        openPlayer(EXERCISES_BY_AREA[toAreaId(type)] || TODAY_EXERCISES);
+      });
+    });
+  }
+
+  /* ===========================================================
+     Home — target area picker (persisted)
+     =========================================================== */
+  function initTargetGrid() {
+    const grid = $("#target-grid");
+    if (!grid) return;
+    const selected = store.get(STORAGE.target, "full-body");
+
+    grid.innerHTML = TARGET_AREAS.map(
+      (t) => `<button class="target-card target-card--${t.id}" type="button" data-area="${t.id}" aria-pressed="${t.id === selected}">
+        <span class="target-card-icon" aria-hidden="true">${iconMarkup(t.id)}</span>
+        <span class="target-card-label">${t.label}</span>
+      </button>`
+    ).join("");
+
+    grid.addEventListener("click", (e) => {
+      const card = e.target.closest(".target-card");
+      if (!card) return;
+      $$(".target-card", grid).forEach((c) => c.setAttribute("aria-pressed", String(c === card)));
+      store.set(STORAGE.target, card.dataset.area);
+      syncDiscoverChip(card.dataset.area);
+      goTo("discover");
+    });
+  }
+
+  /* ===========================================================
+     Discover — filter chips + workout list
+     =========================================================== */
+  let discoverFilter = "all";
+
+  function initDiscover() {
+    const chips = $("#discover-chips");
+    if (!chips) return;
+    const all = [{ id: "all", label: "Hottest", icon: "abs" }, ...TARGET_AREAS.map((t) => ({ ...t, icon: t.id }))];
+    chips.innerHTML = all
+      .map(
+        (t) =>
+          `<button class="chip" type="button" data-area="${t.id}" aria-pressed="${t.id === discoverFilter}">${iconMarkup(t.icon)}${t.label}</button>`
+      )
+      .join("");
+
+    chips.addEventListener("click", (e) => {
+      const chip = e.target.closest(".chip");
+      if (!chip) return;
+      discoverFilter = chip.dataset.area;
+      $$(".chip", chips).forEach((c) => c.setAttribute("aria-pressed", String(c === chip)));
+      renderDiscoverList();
+    });
+
+    renderDiscoverList();
+  }
+
+  function syncDiscoverChip(areaId) {
+    discoverFilter = areaId;
+    const chips = $("#discover-chips");
+    if (!chips) return;
+    $$(".chip", chips).forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.area === areaId)));
+    renderDiscoverList();
+  }
+
+  function renderDiscoverList() {
+    const list = $("#discover-list");
+    if (!list) return;
+    const items = WORKOUTS.filter((w) => discoverFilter === "all" || w.area === discoverFilter);
+    list.innerHTML = items
+      .map(
+        (w) => `<li>
+          <button class="workout-item" type="button" data-workout="${w.id}" data-area="${w.area}">
+            <span class="workout-thumb workout-thumb--${w.area}" aria-hidden="true">${iconMarkup(w.area)}</span>
+            <span>
+              <p class="workout-name">${w.name}</p>
+              <p class="workout-meta">${w.minutes} min · ${w.kcal} kcal</p>
+            </span>
+            <svg class="workout-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+        </li>`
+      )
+      .join("") || `<li class="workout-meta">No workouts for this area yet.</li>`;
+
+    $$(".workout-item", list).forEach((btn) =>
+      btn.addEventListener("click", () => openPlayer(EXERCISES_BY_AREA[btn.dataset.area] || TODAY_EXERCISES))
+    );
+  }
+
+  /* ===========================================================
+     Progress — logging + stats + SVG charts
+     =========================================================== */
+  function getWeights() {
+    return store.get(STORAGE.weights, []);
+  }
+
+  function getStats() {
+    return store.get(STORAGE.stats, { workouts: 18, kcal: 3125, minutes: 213 });
+  }
+
+  function initProgressForm() {
+    const form = $("#log-form");
+    if (!form) return;
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = $("#weight-input", form);
+      const val = parseFloat(input.value);
+      const feedback = $("#log-feedback");
+      if (!val || val < 30 || val > 300) {
+        if (feedback) feedback.textContent = "Enter a weight between 30 and 300 kg.";
+        return;
+      }
+      const weights = getWeights();
+      weights.push({ date: new Date().toISOString().slice(0, 10), weight: val });
+      store.set(STORAGE.weights, weights.slice(-28));
+      if (feedback) feedback.textContent = "Logged for today. Nice work.";
+      input.value = "";
+      renderProgressView();
+      renderHomeProgressPreview();
+    });
+  }
+
+  function renderProgressView() {
+    const stats = getStats();
+    setText("#stat-workouts", stats.workouts);
+    setText("#stat-kcal", stats.kcal.toLocaleString());
+    setText("#stat-minutes", stats.minutes);
+    drawChart($("#chart-svg"), getWeights());
+  }
+
+  function renderHomeProgressPreview() {
+    const weights = getWeights();
+    const latest = weights.length ? weights[weights.length - 1].weight : 77.2;
+    setText("#preview-weight", `${latest} kg`);
+    drawSparkline($("#preview-sparkline"), weights.length ? weights.map((w) => w.weight) : [80, 79.2, 78.5, 78, 77.6, 77.2]);
+  }
+
+  function setText(sel, text) {
+    const el = $(sel);
+    if (el) el.textContent = text;
+  }
+
+  function drawSparkline(svg, values) {
+    if (!svg || !values.length) return;
+    const w = 220, h = 60, pad = 6;
+    const min = Math.min(...values), max = Math.max(...values);
+    const range = max - min || 1;
+    const step = (w - pad * 2) / Math.max(values.length - 1, 1);
+    const points = values.map((v, i) => {
+      const x = pad + i * step;
+      const y = h - pad - ((v - min) / range) * (h - pad * 2);
+      return `${x},${y}`;
+    });
+    svg.innerHTML = `<path d="M${points.join(" L")}" />`;
+  }
+
+  function drawChart(svg, weights) {
+    if (!svg) return;
+    const w = 320, h = 140, padX = 12, padY = 16;
+    if (!weights.length) {
+      svg.innerHTML = `<text x="${w / 2}" y="${h / 2}" text-anchor="middle" fill="var(--text-muted)" font-size="13">Log a weight to see your trend.</text>`;
+      return;
+    }
+    const values = weights.map((d) => d.weight);
+    const min = Math.min(...values), max = Math.max(...values);
+    const range = max - min || 1;
+    const step = (w - padX * 2) / Math.max(values.length - 1, 1);
+    const points = values.map((v, i) => {
+      const x = padX + i * step;
+      const y = h - padY - ((v - min) / range) * (h - padY * 2);
+      return [x, y];
+    });
+    const line = points.map((p) => p.join(",")).join(" L");
+    const fillPath = `M${points[0][0]},${h - padY} L${line} L${points[points.length - 1][0]},${h - padY} Z`;
+    const gridLines = [0.25, 0.5, 0.75]
+      .map((f) => `<line class="grid-line" x1="0" x2="${w}" y1="${h * f}" y2="${h * f}" />`)
+      .join("");
+    const dots = points.map(([x, y]) => `<circle class="trend-dot" cx="${x}" cy="${y}" r="3.5" />`).join("");
+
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--accent)" />
+          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+      ${gridLines}
+      <path class="trend-fill" d="${fillPath}" />
+      <path class="trend-line" d="M${line}" />
+      ${dots}
+    `;
+  }
+
+  /* ===========================================================
+     Workout player — timer-driven exercise walkthrough
+     =========================================================== */
+  const playerState = { exercises: [], index: 0, remaining: 0, timerId: null, paused: false };
+
+  function openPlayer(exercises) {
+    const player = $("#player");
+    if (!player) return;
+    playerState.exercises = exercises;
+    playerState.index = 0;
+    player.hidden = false;
+    document.body.style.overflow = "hidden";
+    loadExercise();
+  }
+
+  function closePlayer() {
+    stopTimer();
+    const player = $("#player");
+    if (player) player.hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  function loadExercise() {
+    const { exercises, index } = playerState;
+    const ex = exercises[index];
+    if (!ex) return closePlayer();
+    setText("#player-step-label", `Exercise ${index + 1} of ${exercises.length}`);
+    setText("#player-title", ex.name);
+    playerState.remaining = ex.seconds;
+    updateTimerDisplay();
+    const fill = $("#player-progress-fill");
+    if (fill) fill.style.width = `${((index + 1) / exercises.length) * 100}%`;
+    startTimer();
+  }
+
+  function updateTimerDisplay() {
+    const m = String(Math.floor(playerState.remaining / 60)).padStart(2, "0");
+    const s = String(playerState.remaining % 60).padStart(2, "0");
+    setText("#player-timer", `${m}:${s}`);
+  }
+
+  function startTimer() {
+    stopTimer();
+    playerState.paused = false;
+    setPauseIcon(false);
+    playerState.timerId = setInterval(() => {
+      if (playerState.remaining <= 0) {
+        nextExercise();
+        return;
+      }
+      playerState.remaining -= 1;
+      updateTimerDisplay();
+    }, 1000);
+  }
+
+  function stopTimer() {
+    if (playerState.timerId) clearInterval(playerState.timerId);
+    playerState.timerId = null;
+  }
+
+  function togglePause() {
+    if (!$("#player") || $("#player").hidden) return;
+    playerState.paused = !playerState.paused;
+    setPauseIcon(playerState.paused);
+    if (playerState.paused) stopTimer();
+    else startTimer();
+  }
+
+  function setPauseIcon(isPaused) {
+    const play = $("#icon-play"), pause = $("#icon-pause"), btn = $("#player-toggle");
+    if (play) play.hidden = !isPaused;
+    if (pause) pause.hidden = isPaused;
+    if (btn) btn.setAttribute("aria-label", isPaused ? "Resume" : "Pause");
+  }
+
+  function nextExercise() {
+    if (playerState.index < playerState.exercises.length - 1) {
+      playerState.index += 1;
+      loadExercise();
+    } else {
+      finishWorkout();
+    }
+  }
+
+  function prevExercise() {
+    if (playerState.index > 0) {
+      playerState.index -= 1;
+      loadExercise();
+    }
+  }
+
+  function finishWorkout() {
+    const stats = getStats();
+    const totalSeconds = playerState.exercises.reduce((sum, e) => sum + e.seconds, 0);
+    stats.workouts += 1;
+    stats.minutes += Math.round(totalSeconds / 60);
+    stats.kcal += 90;
+    store.set(STORAGE.stats, stats);
+    closePlayer();
+    goTo("progress");
+  }
+
+  function initPlayerControls() {
+    $("#start-workout")?.addEventListener("click", () => openPlayer(TODAY_EXERCISES));
+    $("#player-close")?.addEventListener("click", closePlayer);
+    $("#player-toggle")?.addEventListener("click", togglePause);
+    $("#player-next")?.addEventListener("click", nextExercise);
+    $("#player-prev")?.addEventListener("click", prevExercise);
+    document.addEventListener("keydown", (e) => {
+      const player = $("#player");
+      if (!player || player.hidden) return;
+      if (e.key === "Escape") closePlayer();
+      if (e.key === " ") { e.preventDefault(); togglePause(); }
+    });
+  }
+
+  /* ===========================================================
+     Offline banner
+     =========================================================== */
+  function initOfflineBanner() {
+    const banner = $("#offline-banner");
+    if (!banner) return;
+    const update = () => { banner.hidden = navigator.onLine; };
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    update();
+  }
+
+  /* ===========================================================
+     Install prompt (Android/Chrome). iOS has no beforeinstallprompt
+     event, so the banner there would need manual "Add to Home
+     Screen" instructions if desired — omitted here for brevity.
+     =========================================================== */
+  function initInstallPrompt() {
+    let deferredPrompt = null;
+    const banner = $("#install-banner");
+    const installBtn = $("#install-btn");
+    const dismissBtn = $("#install-dismiss");
+    if (!banner) return;
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (store.get("fitpulse:install-dismissed", false)) return;
+      banner.hidden = false;
+    });
+
+    installBtn?.addEventListener("click", async () => {
+      banner.hidden = true;
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+    });
+
+    dismissBtn?.addEventListener("click", () => {
+      banner.hidden = true;
+      store.set("fitpulse:install-dismissed", true);
+    });
+
+    window.addEventListener("appinstalled", () => {
+      banner.hidden = true;
+    });
+  }
+
+  /* ===========================================================
+     Service worker registration + update notification
+     =========================================================== */
+  function initServiceWorker() {
+    if (!("serviceWorker" in navigator)) return;
+
+    window.addEventListener("load", async () => {
+      try {
+        const reg = await navigator.serviceWorker.register("sw.js");
+
+        reg.addEventListener("updatefound", () => {
+          const installing = reg.installing;
+          if (!installing) return;
+          installing.addEventListener("statechange", () => {
+            if (installing.state === "installed" && navigator.serviceWorker.controller) {
+              showUpdateToast(reg);
+            }
+          });
+        });
+      } catch (err) {
+        console.warn("Service worker registration failed:", err);
+      }
+    });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  }
+
+  function showUpdateToast(reg) {
+    const toast = $("#update-toast");
+    if (!toast) return;
+    toast.hidden = false;
+    $("#update-reload")?.addEventListener(
+      "click",
+      () => reg.waiting?.postMessage({ type: "SKIP_WAITING" }),
+      { once: true }
+    );
+    $("#update-dismiss")?.addEventListener("click", () => (toast.hidden = true), { once: true });
+  }
+
+  /* ===========================================================
+     Boot
+     =========================================================== */
+  document.addEventListener("DOMContentLoaded", () => {
+    window.__fitpulseCloseMenuDrawer = closeMenuDrawer;
+    if (window.FitPulseSecurity) {
+      window.FitPulseSecurity.initSecurityCenter();
+      window.FitPulseSecurity.initLockScreen(bootApp);
+    } else {
+      bootApp();
+    }
+  });
+
+  function bootApp() {
+    initTheme();
+    initProfile();
+    initNav();
+    initMenuDrawer();
+    initPlan();
+    initTargetGrid();
+    initDiscover();
+    initProgressForm();
+    initPlayerControls();
+    initOfflineBanner();
+    initInstallPrompt();
+    renderHomeProgressPreview();
+    goTo("home");
+  }
+
+  initServiceWorker();
+})();
+
+  </script>
+
+  <!-- ElevenLabs Conversational AI — floating voice + text chat widget.
+       Replace YOUR_AGENT_ID with the ID from your ElevenLabs dashboard
+       (Conversational AI → your agent → Advanced tab → make the agent
+       "public" with authentication disabled, widgets require this).
+       Renders its own floating launcher icon automatically — no extra
+       markup or CSS needed. -->
+  <elevenlabs-convai agent-id="agent_5301m24zmw19em1825r664nat151"></elevenlabs-convai>
+  <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
+</body>
+</html>
